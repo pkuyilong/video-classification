@@ -21,6 +21,7 @@ __pycache__/
 
 # spcified folder
 /resource/
+/data/rgb
 
 # mac fuck file 
 .DS_Store

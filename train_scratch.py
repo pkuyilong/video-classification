@@ -16,7 +16,7 @@ import torch.nn as nn
 import torch.optim as optim
 import os
 
-device = torch.device('cuda:1')
+device = torch.device('cuda:0')
 
 # train_data  = VideoDataset(root_dir='/home/datasets/mayilong/PycharmProjects/p44/data/rgb', split='train')
 train_data = VideoDataset(
@@ -24,7 +24,7 @@ train_data = VideoDataset(
     split_data='/home/datasets/mayilong/PycharmProjects/p55/data/split_data',
     split='train',
     n_frame=16)
-train_loader = DataLoader(train_data, batch_size=16, shuffle=True)
+train_loader = DataLoader(train_data, batch_size=8, shuffle=True)
 
 # val_data  = VideoDataset(root_dir='/home/datasets/mayilong/PycharmProjects/p44/data/rgb', split='val')
 val_data = VideoDataset(
@@ -48,19 +48,18 @@ interval = 500
 model = C3D(num_classes=7, pretrained=True)
 for module in model.modules():
     if isinstance(module, nn.Conv3d):
-        module.weight.requires_grad = False
-        module.bias.requires_grad = False
+        module.weight.requires_grad = True
+        module.bias.requires_grad = True
     elif isinstance(module, nn.Linear):
         module.weight.requires_grad = True
         module.bias.requires_grad = True
-    else:
-        continue
 
 model = model.to(device)
 
 criterion = nn.CrossEntropyLoss()
 # optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=0.0005)
-optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=lr)
+optimizer = optim.SGD(model.parameters(), lr=lr)
+# optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=lr)
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5)
 # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=25, gamma=0.5, last_epoch=-1)
 

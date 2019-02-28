@@ -48,9 +48,8 @@ class VideoDataset(Dataset):
         buf = self.load_frames(self.video2path[video])
         buf = self.crop(buf, self.n_frame, self.crop_size)
 
-        if self.split == 'test':
-            # Perform data augmentation
-            buf = self.randomflip(buf)
+        # if self.split == 'test':
+        #     buf = self.randomflip(buf)
         buf = self.normalize(buf)
         buf = self.to_tensor(buf)
         return torch.from_numpy(buf), torch.from_numpy(label)
@@ -58,25 +57,6 @@ class VideoDataset(Dataset):
     def __len__(self):
         return len(self.video_list)
 
-    def get_split(self):
-        root_dir = self.root_dir
-        # split_data = self.split_data
-        # split = self.split
-
-        # unsplit_video_set = set()
-        # data_path = os.path.join(split_data, split+'_data')
-        # for txt_file in os.listdir(data_path):
-        #     handle = open(os.path.join(data_path, txt_file), 'r')
-        #     for idx, video  in enumerate(handle.readlines()):
-        #         video = video.strip()
-        #         unsplit_video_set.add(video)
-        # for video in os.listdir(root_dir):
-        #     name = video.strip().split('_')[0].strip()
-        #     if name in unsplit_video_set:
-        #         video_list.append(video)
-
-        video_list = [video for video in os.listdir(root_dir)]
-        return video_list
 
     def randomflip(self, buffer):
         """Horizontally flip the given image and ground truth randomly with a probability of 0.5."""

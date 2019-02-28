@@ -1,0 +1,3 @@
+[train-e-91/300] [train_acc-0.9673 train_loss-5713.9099] [20077/20756] 
+[val-e-91/300] [val_acc-0.7194 val_loss-1.4444] [20077/6864] 
+[train-e-92/300] [train_acc-0.9676 train_loss-5723.5485] [20084/20756] 
