@@ -11,15 +11,16 @@ from dataset import VideoDataset
 from model.C3D_model import C3D
 from torch.utils.data import DataLoader
 
-device = torch.device('cuda:2')
+device = torch.device('cuda:1')
 test_data = VideoDataset(
     root_dir='/home/datasets/mayilong/PycharmProjects/p55/data/rgb',
     split_data='/home/datasets/mayilong/PycharmProjects/p55/data/split_data',
     split='test',
     n_frame=16)
 
-test_loader = DataLoader(test_data, batch_size=2, shuffle=True)
+test_loader = DataLoader(test_data, batch_size=8, shuffle=True)
 
+print('test samples : {}'.format(len(test_data)))
 model = C3D(7)
 
 def test():
@@ -30,13 +31,15 @@ def test():
     for idx, (buf, labels) in enumerate(test_loader):
         buf = buf.to(device)
         labels = labels.to(device)
-        outputs = model(buf)
-        preds = torch.max(outputs, 1)[1]
-        print('p :', preds)
-        print('t :', labels)
-        test_corrects += torch.sum(preds == labels).item()
+        with torch.no_grad():
+            outputs = model(buf)
+            preds = torch.max(outputs, 1)[1]
+            print('p :', preds)
+            print('t :', labels)
+            test_corrects += torch.sum(preds == labels).item()
+            print('{}/{}\n'.format(test_corrects,  (idx+1) * buf.size(0)))
 
-    print('test_acc-{}'.format(test_corrects / len(test_loader))) 
+    print('test_acc-{:.4f}'.format(test_corrects / len(test_data))) 
 
 if __name__ == '__main__':
     print('*'*80)

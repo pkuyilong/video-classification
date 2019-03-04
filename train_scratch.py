@@ -42,7 +42,7 @@ test_data = VideoDataset(
 test_loader = DataLoader(test_data, batch_size=4, shuffle=True)
 
 n_epoch = 300
-lr = 0.0001
+lr = 0.1
 interval = 500
 
 model = C3D(num_classes=7, pretrained=True)
@@ -58,8 +58,8 @@ model = model.to(device)
 
 criterion = nn.CrossEntropyLoss()
 # optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=0.0005)
-optimizer = optim.SGD(model.parameters(), lr=lr)
 # optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=lr)
+optimizer = optim.Adam(model.parameters(), lr=lr)
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5)
 # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=25, gamma=0.5, last_epoch=-1)
 
@@ -140,7 +140,7 @@ def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, 
             try:
                 if not os.path.exists(model_dir):
                     os.mkdir(model_dir)
-                torch.save(model.state_dict(), os.path.join(model_dir,'c3d_new_{:.4f}.pth'.format(val_acc)))
+                torch.save(model.state_dict(), os.path.join(model_dir,'c3d_adam_new_{:.4f}.pth'.format(val_acc)))
             except Exception as e:
                 print(str(e))
                 with open('./record.txt', 'a+') as record:

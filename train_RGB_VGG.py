@@ -2,91 +2,112 @@
 # -*- coding: utf-8 -*-
 # vim:fenc=utf-8
 #
-# Copyright © 2019 mayilong <mayilong@img>
-#
-# Distributed under terms of the MIT license.
 
 import torch
 import numpy as np
-from dataset import VideoDataset
 from torch.utils.data import DataLoader
 from model.C3D_model import C3D
-from model.C3D_scratch import C3D_S
 import torch.nn as nn
 import torch.optim as optim
 import os
+from torchvision import models
+from dataset_RGB import VideoDataset
 
 device = torch.device('cuda:1')
 
-# train_data  = VideoDataset(root_dir='/home/datasets/mayilong/PycharmProjects/p44/data/rgb', split='train')
 train_data = VideoDataset(
     root_dir='/home/datasets/mayilong/PycharmProjects/p55/data/rgb',
     split_data='/home/datasets/mayilong/PycharmProjects/p55/data/split_data',
     split='train',
     n_frame=16)
-train_loader = DataLoader(train_data, batch_size=16, shuffle=True)
+train_loader = DataLoader(train_data, batch_size=4, shuffle=True, num_workers=8)
 
-# val_data  = VideoDataset(root_dir='/home/datasets/mayilong/PycharmProjects/p44/data/rgb', split='val')
 val_data = VideoDataset(
     root_dir='/home/datasets/mayilong/PycharmProjects/p55/data/rgb',
     split_data='/home/datasets/mayilong/PycharmProjects/p55/data/split_data',
     split='val',
     n_frame=16)
-val_loader = DataLoader(val_data, batch_size=4, shuffle=True)
+val_loader = DataLoader(val_data, batch_size=4, shuffle=True, num_workers=8)
 
-test_data = VideoDataset(
-    root_dir='/home/datasets/mayilong/PycharmProjects/p55/data/rgb',
-    split_data='/home/datasets/mayilong/PycharmProjects/p55/data/split_data',
-    split='test',
-    n_frame=16)
-test_loader = DataLoader(test_data, batch_size=4, shuffle=True)
-
-n_epoch = 300
-lr = 0.0001
+n_epoch = 100
+lr = 0.01
 interval = 500
 
-model = C3D(num_classes=7, pretrained=True)
-for module in model.modules():
-    if isinstance(module, nn.Conv3d):
-        module.weight.requires_grad = False
-        module.bias.requires_grad = False
-    elif isinstance(module, nn.Linear):
-        module.weight.requires_grad = True
-        module.bias.requires_grad = True
-    else:
-        continue
+class RGBModel(nn.Module):
+    def __init__(self, n_class):
+        super().__init__()
+        self.n_class = n_class
+        self.model = models.vgg16(pretrained=False)
+        # self.model.classifier[6] = nn.Linear(self.model.classifier[6].in_features, 7)
+        self.fc = nn.Linear(1000, 7)
+        # self.model.classifier.add_module('7', nn.Linear(self.model.classifier[6].out_features, self.n_class))
 
+        for name, param in self.model.named_parameters():
+            param.requires_grad = True
+        for name, param in self.model.classifier.named_parameters():
+            param.requires_grad = True
+
+    def forward(self, buf):
+        # print('buf shape is {}'.format(buf.shape))
+        n_batch = buf.size(0)
+        n_frame = buf.size(1)
+        res = None
+
+        for idx in range(n_batch):
+            output = self.model(buf[idx])
+            # print('output shape {}'.format(output.shape))
+            output = output.reshape(n_frame, -1)
+            # print('output reshape {}'.format(output.shape))
+            output = self.fc(output)
+            # print('forward', output)
+            output = torch.mean(output, 0, keepdim=True)
+            # print('forward mean', output)
+
+            if idx == 0:
+                res = output
+            else:
+                res = torch.cat((res, output), 0)
+        return res
+
+model = RGBModel(n_class=7)
 model = model.to(device)
 
 criterion = nn.CrossEntropyLoss()
-# optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=0.0005)
-optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=lr, momentum=0.9, weight_decay=0.0005 )
-scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5)
+
+# optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=lr, momentum=0.9, weight_decay=0.0005 )
+optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=0.0005 )
+# optimizer = optim.SGD(model.parameters(), lr=lr)
+scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.2, patience=5)
 # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=25, gamma=0.5, last_epoch=-1)
 
 def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, model_dir):
-    record = open('./record.txt', 'w+')
+    print('Start trianning')
+    RGB_record = open('./RGB_record.txt', 'w+')
     for epoch in range(n_epoch):
         model.train()
         train_corrects = 0
         train_loss = 0
+
         for idx, (buf, labels) in enumerate(train_loader):
+
             buf = buf.to(device)
             labels = labels.to(device)
-
             optimizer.zero_grad()
             outputs = model(buf)
 
             preds = nn.Softmax(dim=1)(outputs)
+            # print('model output:\n', outputs)
+            # print(preds)
 
             loss = criterion(preds, labels) * buf.size(0)
 
             train_loss += loss.item()
+            # print('loss:', loss.item())
 
             _, pred_label = torch.max(preds, 1)
 
-            # print('pred label', pred_label)
-            # print('true label', labels)
+            print('pred label', pred_label)
+            print('true label', labels)
 
             train_corrects += torch.sum(pred_label == labels)
 
@@ -94,19 +115,19 @@ def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, 
             if (idx+1) %  interval == 0:
                 all_samples = (idx+1) * buf.size(0)
                 train_loss  = train_loss / all_samples
-                print('processing [current:{}/ total:{}],  train_loss  {:.4f}'.format(all_samples, len(train_data), train_loss))
+                print('RGB processing [current:{}/ total:{}],  train_loss  {:.4f}'.format(all_samples, len(train_data), train_loss))
                 train_loss = 0
 
                 train_acc = train_corrects.cpu().item() / all_samples
-                print('processing train_acc {:.4f}  [{}/{}]'.format(train_acc, train_corrects, all_samples))
+                print('RGB processing train_acc {:.4f}  [{}/{}]'.format(train_acc, train_corrects, all_samples))
             loss.backward()
             optimizer.step()
 
         train_acc = train_corrects.cpu().item() / len(train_data)
-        print('[*] [train-e-{}/{}] [train_acc-{:.4f}, train_loss-{:.4f}][{}/{}]'.
+        print('[*] RGB [train-e-{}/{}] [train_acc-{:.4f}, train_loss-{:.4f}][{}/{}]'.
                 format(epoch, n_epoch, train_acc, train_loss, train_corrects, len(train_data)))
-        with open('./record.txt', 'a+') as record:
-            record.write('[train-e-{}/{}] [train_acc-{:.4f} train_loss-{:.4f}] [{}/{}] \n'.
+        with open('./RGB_record.txt', 'a+') as RGB_record:
+            RGB_record.write('[train-e-{}/{}] [train_acc-{:.4f} train_loss-{:.4f}] [{}/{}] \n'.
                     format(epoch, n_epoch, train_acc, train_loss, train_corrects, len(train_data)))
 
         model.eval()
@@ -134,18 +155,18 @@ def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, 
         val_acc = val_corrects.cpu().item() / len(val_data)
         print('[val-e-{}/{}] [{}/{}]'.format(epoch, n_epoch, val_corrects, len(val_data)))
         print('val_acc {:.4f}, val_loss {:.4f}'.format(val_acc, val_loss))
-        with open('./record.txt', 'a+') as record:
-            record.write('[val-e-{}/{}] [val_acc-{:.4f} val_loss-{:.4f}] [{}/{}] \n'.
+        with open('./RGB_record.txt', 'a+') as RGB_record:
+            RGB_record.write('[val-e-{}/{}] [val_acc-{:.4f} val_loss-{:.4f}] [{}/{}] \n'.
                     format(epoch, n_epoch, val_acc, val_loss, train_corrects, len(val_data)))
         if val_acc >= 0.70:
             try:
                 if not os.path.exists(model_dir):
-                    os.mkdir(model_dir)
+                    os.makedirs(model_dir)
                 torch.save(model.state_dict(), os.path.join(model_dir,'c3d_momentum_new_{:.4f}.pth'.format(val_acc)))
             except Exception as e:
                 print(str(e))
-                with open('./record.txt', 'a+') as record:
-                    record.write('[ERROR] ' + str(e) + '\n')
+                with open('./RGB_record.txt', 'a+') as RGB_record:
+                    RGB_record.write('[ERROR] ' + str(e) + '\n')
 
 if __name__ == '__main__':
-    train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, '/home/datasets/mayilong/PycharmProjects/p55/trained_model')
+    train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, '/home/datasets/mayilong/PycharmProjects/p55/trained_model/rgb')
