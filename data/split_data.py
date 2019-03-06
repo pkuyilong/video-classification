@@ -29,18 +29,18 @@ def split_train_val_test(cls_txt, save_dir, video2path, low, high, label, n_vide
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
 
-    if not os.path.exists(os.path.join(save_dir, 'train_data')):
-        os.makedirs(os.path.join(save_dir, 'train_data'))
-    if not os.path.exists(os.path.join(save_dir, 'val_data')):
-        os.makedirs(os.path.join(save_dir, 'val_data'))
-    if not os.path.exists(os.path.join(save_dir, 'test_data')):
-        os.makedirs(os.path.join(save_dir, 'test_data'))
+    if not os.path.exists(os.path.join(save_dir, 'train')):
+        os.makedirs(os.path.join(save_dir, 'train'))
+    if not os.path.exists(os.path.join(save_dir, 'val')):
+        os.makedirs(os.path.join(save_dir, 'val'))
+    if not os.path.exists(os.path.join(save_dir, 'test')):
+        os.makedirs(os.path.join(save_dir, 'test'))
 
     video2path = parse_pkl(video2path)
 
-    train_txt = os.path.join(os.path.join(save_dir, 'train_data'), cls)
-    val_txt = os.path.join(os.path.join(save_dir, 'val_data'), cls)
-    test_txt = os.path.join(os.path.join(save_dir, 'test_data'), cls)
+    train_txt = os.path.join(os.path.join(save_dir, 'train'), cls)
+    val_txt = os.path.join(os.path.join(save_dir, 'val'), cls)
+    test_txt = os.path.join(os.path.join(save_dir, 'test'), cls)
 
     train_handle = open(train_txt, 'w+')
     val_handle = open(val_txt, 'w+')
