@@ -1,14 +1,8 @@
 import torch
 import torch.nn as nn
-import sys
-sys.path.append('../')
 
 device = torch.device("cuda:3")
 class C3D(nn.Module):
-    """
-    The C3D network.
-    """
-
     def __init__(self, num_classes, pretrained=False):
         super(C3D, self).__init__()
 
@@ -107,7 +101,7 @@ class C3D(nn.Module):
                         "classifier.3.bias": "fc7.bias",
                         }
 
-        p_dict = torch.load('/home/datasets/mayilong/PycharmProjects/p44/pretrained_model/c3d-pretrained.pth')
+        p_dict = torch.load('/home/datasets/mayilong/PycharmProjects/p55/pretrained_model/c3d-pretrained.pth')
         s_dict = self.state_dict()
         for name in p_dict:
             if name not in corresp_name:

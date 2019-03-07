@@ -1,24 +1,19 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 # vim:fenc=utf-8
-#
-# Copyright © 2019 mayilong <mayilong@img>
-#
-# Distributed under terms of the MIT license.
 
 import torch
 import numpy as np
-from dataset import VideoDataset
 from torch.utils.data import DataLoader
 from model.C3D_model import C3D
 from model.C3D_scratch import C3D_S
 import torch.nn as nn
 import torch.optim as optim
 import os
+from dataset import VideoDataset
 
 device = torch.device('cuda:1')
 
-# train_data  = VideoDataset(root_dir='/home/datasets/mayilong/PycharmProjects/p44/data/rgb', split='train')
 train_data = VideoDataset(
     root_dir='/home/datasets/mayilong/PycharmProjects/p55/data/rgb',
     split_data='/home/datasets/mayilong/PycharmProjects/p55/data/split_data',
@@ -26,7 +21,6 @@ train_data = VideoDataset(
     n_frame=16)
 train_loader = DataLoader(train_data, batch_size=16, shuffle=True)
 
-# val_data  = VideoDataset(root_dir='/home/datasets/mayilong/PycharmProjects/p44/data/rgb', split='val')
 val_data = VideoDataset(
     root_dir='/home/datasets/mayilong/PycharmProjects/p55/data/rgb',
     split_data='/home/datasets/mayilong/PycharmProjects/p55/data/split_data',

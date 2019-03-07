@@ -9,7 +9,8 @@ import numpy as np
 from torch.utils.data import DataLoader
 import torch.nn as nn
 from torchvision import models
-from dataset_RGB import VideoDataset
+
+from v1_several_dataset import VideoDataset
 
 device = torch.device('cuda:0')
 
@@ -27,16 +28,16 @@ val_data = VideoDataset(
 train_loader = DataLoader(train_data, batch_size=8, shuffle=True)
 val_loader = DataLoader(val_data, batch_size=4, shuffle=True)
 
-
 n_epoch = 100
-lr = 0.01
+lr = 0.0001
 interval = 500
 
 class RGBModel(nn.Module):
     def __init__(self):
         super().__init__()
         self.model = models.densenet121(pretrained=True)
-        self.model.classifier = nn.Linear(self.model.classifier.in_features, 7)
+        self.model.classifier.add_module(1000, 512)
+        self.model.classifier.add_module(512, 7)
         for name, param in self.model.named_parameters():
             param.requires_grad = False
         for name, param in self.model.classifier.named_parameters():
@@ -47,9 +48,7 @@ class RGBModel(nn.Module):
         res = None
         for idx in range(n_frame):
             output = self.model(buf[idx])
-            output = nn.Softmax(dim=1)(output)
-            output, _ = torch.max(output, 0)
-            output = output.unsqueeze(0)
+            output, _ = torch.max(output, 0, keepdim=True)
             if idx == 0:
                 res = output
             else:
@@ -69,51 +68,48 @@ def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, 
     record = open('./{}.txt'.foramt(os.path.basename(__file__).split('.')[0]), 'w')
     for epoch in range(n_epoch):
         model.train()
-        train_corrects = 0
-        train_loss = 0
-        train_total = 0
+        corrects = 0
+        loss = 0
+        total = 0
 
-        for idx, (buf, labels) in enumerate(train_loader):
+        for idx, (buf, labels) in enumerate(loader):
             buf = buf.to(device)
             labels = labels.to(device)
             optimizer.zero_grad()
             outputs = model(buf)
 
+            loss = criterion(outputs, labels)
 
-            loss = criterion(outputs, labels) * buf.size(0)
-
-            train_loss += loss.item()
+            loss += loss.item()
 
             _, pred_label = torch.max(preds, 1)
             print('pred label', pred_label)
             print('true label', labels)
 
-            train_corrects += torch.sum(pred_label == labels).item()
+            corrects += torch.sum(pred_label == labels).item()
 
             if (idx+1) %  interval == 0:
-                train_total += buf.size(0)
-                train_loss  = train_loss / train_total
-                print('RGB processing [current:{}/ total:{}],  train_loss  {:.4f}'.format(train_total, train_total, train_loss))
+                total += buf.size(0)
+                loss  = loss / total
+                print('RGB processing [current:{}/ total:{}],  loss  {:.4f}'.format(total, total, loss))
 
-                train_acc = train_corrects / train_total
-                print('RGB processing train_acc {:.4f}  [{}/{}]'.format(train_acc, train_corrects, train_total))
+                acc = corrects / total
+                print('RGB processing acc {:.4f}  [{}/{}]'.format(acc, corrects, total))
             loss.backward()
             optimizer.step()
 
-        train_acc = train_corrects / train_total
-        print('[*] RGB [train-e-{}/{}] [train_acc-{:.4f}, train_loss-{:.4f}][{}/{}]'.
-                format(epoch, n_epoch, train_acc, train_loss, train_corrects, train_total))
+        acc = corrects / total
+        print('[*] RGB [train-e-{}/{}] [acc-{:.4f}, loss-{:.4f}][{}/{}]'.format(epoch, n_epoch, acc, loss, corrects, total))
         with open('./{}.txt'.foramt(os.path.basename(__file__).split('.')[0]), 'a+') as record:
-            record.write('[train-e-{}/{}] [train_acc-{:.4f} train_loss-{:.4f}] [{}/{}] \n'.
-                    format(epoch, n_epoch, train_acc, train_loss, train_corrects, train_total))
+            record.write('[train-e-{}/{}] [acc-{:.4f} loss-{:.4f}] [{}/{}] \n'.format(epoch, n_epoch, acc, loss, corrects, total))
 
         model.eval()
         with torch.no_grad():
-            val_corrects = 0
-            val_loss = 0
-            val_total = 0
+            corrects = 0
+            loss = 0
+            total = 0
 
-            for idx, (buf, labels) in enumerate(val_loader):
+            for idx, (buf, labels) in enumerate(loader):
                 optimizer.zero_grad()
 
                 buf = buf.to(device)
@@ -122,30 +118,27 @@ def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, 
                 outputs = model(buf)
 
                 loss = criterion(outputs, labels)
-                val_loss += loss.item()
+                loss += loss.item()
 
                 _, pred_labels = torch.max(preds, 1)
-                val_corrects += torch.sum(pred_labels == labels).item()
-                val_total += buf.size(0)
+                corrects += torch.sum(pred_labels == labels).item()
+                total += buf.size(0)
 
-            val_loss = val_loss / val_total
-
-            # may update lr
-            # scheduler.step(val_loss)
-
-            val_acc = val_corrects / val_total
-            print('[val-e-{}/{}] [{}/{}]'.format(epoch, n_epoch, val_corrects, val_total))
-            print('val_acc {:.4f}, val_loss {:.4f}'.format(val_acc, val_loss))
+            loss = loss / total
+            # scheduler.step(loss)
+            acc = corrects / total
+            print('[val-e-{}/{}] [{}/{}]'.format(epoch, n_epoch, corrects, total))
+            print('acc {:.4f}, loss {:.4f}'.format(acc, loss))
             with open('./{}.txt'.foramt(os.path.basename(__file__).split('.')[0]), 'a+') as record:
-                record.write('[val-e-{}/{}] [val_acc-{:.4f} val_loss-{:.4f}] [{}/{}] \n'.
-                    format(epoch, n_epoch, val_acc, val_loss, val_corrects, val_total))
+                record.write('[val-e-{}/{}] [acc-{:.4f} loss-{:.4f}] [{}/{}] \n'.
+                    format(epoch, n_epoch, acc, loss, corrects, total))
 
             # whether save model
-            if val_acc >= 0.70:
+            if acc >= 0.70:
                 try:
                     if not os.path.exists(model_dir):
                         os.makedirs(model_dir)
-                    torch.save(model.state_dict(), os.path.join(model_dir,'RGB_densenet_1_{:.4f}.pth'.format(val_acc)))
+                    torch.save(model.state_dict(), os.path.join(model_dir,'RGB_densenet_1_{:.4f}.pth'.format(acc)))
                 except Exception as e:
                     print(str(e))
                     with open('./record.txt', 'a+') as record:

@@ -17,8 +17,14 @@ def extract_videos(video_data_path):
     video2path = pickle.load(
             open('/home/datasets/mayilong/PycharmProjects/p55/resource/train_val_video2path.pkl', 'rb'))
     for split in os.listdir(video_data_path):
+
+        if split != 'val':
+            continue
+
         for txt_file in os.listdir(os.path.join(video_data_path, split)):
             cls = txt_file.split('.')[0]
+            if cls != 'game':
+                continue
             print('process {} - {}'.format(split, cls))
             handle = open(os.path.join(video_data_path, split, txt_file), 'r')
             for line in handle.readlines():
