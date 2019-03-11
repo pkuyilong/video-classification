@@ -1,17 +1,15 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 # vim:fenc=utf-8
-#
 
 import torch
 import numpy as np
 from torch.utils.data import DataLoader
-from model.C3D_model import C3D
 import torch.nn as nn
 import torch.optim as optim
 import os
 from torchvision import models
-from dataset_RGB_1 import VideoDataset
+from dataset import VideoDataset
 
 device = torch.device('cuda:1')
 
@@ -20,20 +18,20 @@ train_data = VideoDataset(
     split_data='/home/datasets/mayilong/PycharmProjects/p55/data/split_data',
     split='train',
     n_frame=16)
-train_loader = DataLoader(train_data, batch_size=8, shuffle=True, num_workers=1)
+train_loader = DataLoader(train_data, batch_size=32, shuffle=True, num_workers=1)
 
 val_data = VideoDataset(
     root_dir='/home/datasets/mayilong/PycharmProjects/p55/data/rgb',
     split_data='/home/datasets/mayilong/PycharmProjects/p55/data/split_data',
     split='val',
     n_frame=16)
-val_loader = DataLoader(val_data, batch_size=8, shuffle=True, num_workers=8)
+val_loader = DataLoader(val_data, batch_size=16, shuffle=True, num_workers=8)
 
 n_epoch = 150
 lr = 0.0001
-interval = 50
+interval = 20
 
-class RGBModel2(nn.Module):
+class RGBModelS(nn.Module):
     def __init__(self, n_class):
         super().__init__()
         self.n_class = n_class
@@ -89,9 +87,6 @@ class RGBModel(nn.Module):
         self.n_class = n_class
         self.model = models.vgg16(pretrained=True)
         self.model.classifier.add_module('7', nn.Linear(1000, 7))
-        # self.model.classifier[6] = nn.Linear(self.model.classifier[6].in_features, 7)
-        # self.fc = nn.Linear(1000, 7)
-        # self.model.classifier.add_module('7', nn.Linear(self.model.classifier[6].out_features, self.n_class))
 
         # for name, m in self.model.named_modules():
         #     if isinstance(m, nn.Conv2d):
@@ -105,8 +100,16 @@ class RGBModel(nn.Module):
             param.requires_grad = True
 
     def forward(self, buf):
-        output = self.model(buf)
-        return output
+        n_batch = buf.size(0)
+        res = None
+        for i in range(n_batch):
+            output = self.model(buf[i])
+            output, _ = torch.max(output, dim=0, keepdim=True)
+            if i == 0:
+                res = output
+            else:
+                res = torch.cat((output, res), 0)
+        return res
 
 model = RGBModel(n_class=7)
 model = model.to(device)
@@ -125,12 +128,13 @@ scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0
 
 def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, model_dir):
     print('Start trianning')
-    RGB_record = open('./{}.txt'.format(os.path.basename(__file__).split('.')[0]), 'w+')
+    record = open('./{}.txt'.format(os.path.basename(__file__).split('.')[0]), 'w+')
     for epoch in range(n_epoch):
         model.train()
-        train_corrects = 0
-        train_total = 0
-        train_loss = 0
+        corrects = 0
+        total = 0
+        total_loss = 0
+        loss = 0
 
         for idx, (buf, labels) in enumerate(train_loader):
 
@@ -140,76 +144,62 @@ def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, 
 
             loss = criterion(outputs, labels)
 
+            total_loss += loss.item()
             _, pred_label = torch.max(outputs, 1)
+            corrects += torch.sum(pred_label == labels).item()
+            total += buf.size(0)
 
-            train_loss += loss.item()
-            train_corrects += torch.sum(pred_label == labels).item()
-            train_total += buf.size(0)
-
-            # print('pred label', pred_label)
-            # print('true label', labels)
+            print('pred label', pred_label)
+            print('true label', labels)
 
             if (idx+1) %  interval == 0:
-                train_loss  = train_loss / train_total
-                print('RGB processing [current:{}/ total:{}],  train_loss  {:.4f}'.format(train_total, len(train_data), train_loss))
-
-                train_acc = train_corrects / train_total
-                print('RGB processing train_acc {:.4f}  [{}/{}]'.format(train_acc, train_corrects, train_total))
+                print('[train-{}/{}] [{}/{}] [acc-{:.4f} loss-{:.4f}]'.format(epoch, n_epoch, corrects, total, corrects/total, total_loss/total))
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-        train_acc = train_corrects / train_total
-        print('[*] RGB [train-e-{}/{}] [train_acc-{:.4f}, train_loss-{:.4f}][{}/{}]'.
-                format(epoch, n_epoch, train_acc, train_loss, train_corrects, train_total))
-
+        print('[train-{}/{}] [{}/{}] [acc-{:.4f} loss-{:.4f}]'.format(epoch, n_epoch, corrects, total, corrects/total, total_loss/total))
         with open('./{}.txt'.format(os.path.basename(__file__).split('.')[0]),  'a+') as record:
-            record.write('[train-e-{}/{}] [train_acc-{:.4f} train_loss-{:.4f}] [{}/{}] \n'.
-                    format(epoch, n_epoch, train_acc, train_loss, train_corrects, train_total))
+            record.write('[train-{}/{}] [{}/{}] [acc-{:.4f} loss-{:.4f}]'.format(epoch, n_epoch, corrects, total, corrects/total, total_loss/total))
 
         model.eval()
         with torch.no_grad():
-            val_corrects = 0
-            val_total = 0
-            val_loss = 0
+            corrects = 0
+            total = 0
+            loss = 0
+            total_loss = 0
+            acc = 0
 
             for idx, (buf, labels) in enumerate(val_loader):
                 buf = buf.to(device)
                 labels = labels.to(device)
                 outputs = model(buf)
+                loss = criterion(outputs, labels)
 
-                preds = nn.Softmax(dim=1)(outputs)
+                total_loss += loss.item()
+                total += buf.size(0)
                 _, pred_labels = torch.max(preds, 1)
+                corrects += torch.sum(pred_labels == labels).item()
 
-                loss = criterion(preds, labels) * buf.size(0)
-                val_loss += loss.item()
-                val_total += buf.size(0)
-
-                val_corrects += torch.sum(pred_labels == labels).item()
-
-            val_loss  = val_loss / val_total
             # may modify learning rate
-            scheduler.step(val_loss)
-
-            val_acc = val_corrects / val_total
-
-            print('[val-e-{}/{}] [{}/{}]'.format(epoch, n_epoch, val_corrects, val_total))
-            print('val_acc {:.4f}, val_loss {:.4f}'.format(val_acc, val_loss))
+            scheduler.step(loss)
+            print('[val-{}/{}] [{}/{}] [acc-{:.4f} loss-{:.4f}]'.format(epoch, n_epoch, corrects, total, corrects/total, total_loss/total))
 
             with open('./{}.txt'.format(os.path.basename(__file__).split('.')[0]),  'a+') as record:
-                record.write('[val-e-{}/{}] [val_acc-{:.4f} val_loss-{:.4f}] [{}/{}]\n'.
-                        format(epoch, n_epoch, val_acc, val_loss, val_corrects, val_total))
+                record.write('[val-{}/{}] [{}/{}] [acc-{:.4f} loss-{:.4f}]'.
+                        format(epoch, n_epoch, corrects, total, corrects/total, total_loss/total))
 
-            if val_acc >= 0.50:
+            if acc >= 0.50:
                 try:
                     if not os.path.exists(model_dir):
                         os.makedirs(model_dir)
-                    torch.save(model.state_dict(), os.path.join(model_dir,'RGB_VGG_1_{:.4f}.pth'.format(val_acc)))
+
+                    torch.save(model.state_dict(), os.path.join(model_dir,'vgg16_16_{:.4f}.pth'.format(corrects/total)))
                 except Exception as e:
                     print(str(e))
                     with open('./{}.txt'.format(os.path.basename(__file__).split('.')[0]),  'a+') as record:
                         record.write('[ERROR] ' + str(e) + '\n')
 
 if __name__ == '__main__':
-    train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, '/home/datasets/mayilong/PycharmProjects/p55/trained_model/rgb')
+    train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, os.path.join(os.getcwd(), 'trained_model'))

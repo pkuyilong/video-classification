@@ -4,8 +4,6 @@ import numpy as np
 import torch
 import numpy as np
 from torch.utils.data import Dataset
-from utils.store_utils import parse_pkl
-
 
 class VideoDataset(Dataset):
 
@@ -27,8 +25,8 @@ class VideoDataset(Dataset):
         # self.resize_width = 168
         # self.crop_size = 112
 
-        self.resize_height = 224
-        self.resize_width = 224
+        self.resize_height = 280
+        self.resize_width = 280
         self.crop_size = 224
 
         print('init video_list')
@@ -47,22 +45,42 @@ class VideoDataset(Dataset):
     def __getitem__(self, index):
         video = self.video_list[index]
         label = np.array(self.video2label[video])
-        buf = self.load_frames(self.video2path[video])
-        # buf = self.crop(buf, self.n_frame, self.crop_size)
+        buf = self._load_frames(self.video2path[video])
 
         # if self.split == 'test':
         #     buf = self.randomflip(buf)
-        buf = self.normalize(buf)
-        # buf = self.to_tensor(buf)
+        buf = self._crop(buf, self.crop_size)
+        buf = self._flip(buf)
         return torch.from_numpy(buf), torch.from_numpy(label)
 
     def __len__(self):
         return len(self.video_list)
 
+    def _load_frames(self, video_folder):
+        frames = sorted([os.path.join(video_folder, img) for img in os.listdir(video_folder)])
+        buf = np.empty((self.n_frame, 3, self.resize_height, self.resize_width), np.float32)
+        i = 0
+        try:
+            for idx, frame in enumerate(frames):
+                    frame = cv.imread(frame)
+                    frame = cv.resize(frame, (self.resize_height, self.resize_width))
+                    frame = frame.transpose(2,0,1).astype(np.float32)
+                    buf[i] = frame
+                    i += 1
 
-    def randomflip(self, buffer):
-        """Horizontally flip the given image and ground truth randomly with a probability of 0.5."""
+            if buf.shape[0] == 0:
+                raise RuntimeError('buf is empty')
+            if buf.shape[0] < 16:
+                need_to_fill = 16-buf.size(0)
+                while need_to_fill > 0:
+                    buf.append(buf[-1])
+                    need_to_fill -= 1
 
+        except Exception as e:
+            print(e, video_folder)
+        return buf
+
+    def _flip(self, buffer):
         if np.random.random() < 0.5:
             for i, frame in enumerate(buffer):
                 frame = cv.flip(buffer[i], flipCode=1)
@@ -70,37 +88,12 @@ class VideoDataset(Dataset):
 
         return buffer
 
-    def normalize(self, buffer):
-        for i, frame in enumerate(buffer):
-            frame -= np.array([[[90.0]], [[98.0]], [[102.0]]])
-            buffer[i] = frame
-        return buffer
 
-    def to_tensor(self, buffer):
-        return buffer.transpose((3, 0, 1, 2))
-
-    def load_frames(self, video_folder):
-        frames = sorted([os.path.join(video_folder, img) for img in os.listdir(video_folder)])
-        buf = np.empty((self.n_frame, 3, 224, 224), np.float32)
-
-        i = 0
-        for idx, frame in enumerate(frames):
-            try:
-                frame = cv.imread(frame)
-                frame = cv.resize(frame, (224, 224))
-                frame = frame.transpose(2,0,1).astype(np.float32)
-                buf[i] = frame
-                i += 1
-            except Exception as e:
-                print(e, video_folder)
+    def _crop(self, buf, crop_size):
+        height_index = np.random.randint(buf.shape[2] - crop_size)
+        width_index = np.random.randint(buf.shape[3] - crop_size)
+        buf = buf[:, :, height_index:height_index + crop_size, width_index:width_index + crop_size]
         return buf
-
-    def crop(self, buffer, n_frame, crop_size):
-        height_index = np.random.randint(buffer.shape[1] - crop_size)
-        width_index = np.random.randint(buffer.shape[2] - crop_size)
-
-        buffer = buffer[:, height_index:height_index + crop_size, width_index:width_index + crop_size, :]
-        return buffer
 
 
 if __name__ == "__main__":

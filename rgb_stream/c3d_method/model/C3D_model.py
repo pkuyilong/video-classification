@@ -25,16 +25,12 @@ class C3D(nn.Module):
         self.pool5 = nn.MaxPool3d(kernel_size=(2, 2, 2), stride=(2, 2, 2), padding=(0, 1, 1))
 
         self.fc6 = nn.Linear(8192, 4096)
-        # sellf.fc6 = nn.Linear(4096, num_classes)
         self.fc7 = nn.Linear(4096, 4096)
         self.fc8 = nn.Linear(4096, num_classes)
-
         self.dropout = nn.Dropout(p=0.5)
-
         self.relu = nn.ReLU()
 
         self.__init_weight()
-
         if pretrained:
             self.__load_pretrained_weights()
 
@@ -64,7 +60,6 @@ class C3D(nn.Module):
         x = self.relu(self.fc7(x))
         x = self.dropout(x)
         x = self.fc8(x)
-
         return x
 
     def __load_pretrained_weights(self):
@@ -101,7 +96,7 @@ class C3D(nn.Module):
                         "classifier.3.bias": "fc7.bias",
                         }
 
-        p_dict = torch.load('/home/datasets/mayilong/PycharmProjects/p55/pretrained_model/c3d-pretrained.pth')
+        p_dict = torch.load('/home/datasets/mayilong/PycharmProjects/p55/rgb_stream/c3d_method/pretrained_model/c3d-pretrained.pth')
         s_dict = self.state_dict()
         for name in p_dict:
             if name not in corresp_name:
@@ -143,6 +138,5 @@ def get_10x_lr_params(model):
 if __name__ == "__main__":
     inputs = torch.rand(4, 3, 16, 112, 112).to(device)
     net = C3D(num_classes=101, pretrained=True).to(device)
-
-    outputs = net.forward(inputs)
+    outputs = net(inputs)
     print(outputs.size())

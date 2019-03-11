@@ -4,11 +4,9 @@ import numpy as np
 import torch
 import numpy as np
 from torch.utils.data import Dataset
-from utils.store_utils import parse_pkl
 
 
 class VideoDataset(Dataset):
-
     def __init__(self, root_dir, split_data, split, n_frame=16):
         """
         root_dir : 存放数据的根目录
@@ -22,14 +20,8 @@ class VideoDataset(Dataset):
         self.n_frame = n_frame
         self.split_data = split_data
 
-        # The following three parameters are chosen as described in the paper section 4.1
-        # self.resize_height = 168
-        # self.resize_width = 168
-        # self.crop_size = 112
-
-        self.resize_height = 224
-        self.resize_width = 224
-        self.crop_size = 224
+        self.resize_size = 168
+        self.crop_size = 112
 
         print('init video_list')
         self.video_list = [video for cls in os.listdir(os.path.join(self.root_dir, split)) for video in os.listdir(os.path.join(self.root_dir, split, cls))]
@@ -48,12 +40,13 @@ class VideoDataset(Dataset):
         video = self.video_list[index]
         label = np.array(self.video2label[video])
         buf = self.load_frames(self.video2path[video])
-        # buf = self.crop(buf, self.n_frame, self.crop_size)
+        buf = self.crop(buf, self.crop_size)
 
-        # if self.split == 'test':
-        #     buf = self.randomflip(buf)
+        if self.split == 'train':
+            buf = self.randomflip(buf)
+
         buf = self.normalize(buf)
-        # buf = self.to_tensor(buf)
+        buf = buf.transpose((1, 0, 2, 3))
         return torch.from_numpy(buf), torch.from_numpy(label)
 
     def __len__(self):
@@ -76,31 +69,25 @@ class VideoDataset(Dataset):
             buffer[i] = frame
         return buffer
 
-    def to_tensor(self, buffer):
-        return buffer.transpose((3, 0, 1, 2))
-
     def load_frames(self, video_folder):
         frames = sorted([os.path.join(video_folder, img) for img in os.listdir(video_folder)])
-        buf = np.empty((self.n_frame, 3, 224, 224), np.float32)
+        buf = np.empty((self.n_frame, 3, self.resize_size, self.resize_size), np.float32)
 
-        i = 0
         for idx, frame in enumerate(frames):
             try:
                 frame = cv.imread(frame)
-                frame = cv.resize(frame, (224, 224))
+                frame = cv.resize(frame, (self.resize_size, self.resize_size))
                 frame = frame.transpose(2,0,1).astype(np.float32)
-                buf[i] = frame
-                i += 1
+                buf[idx] = frame
             except Exception as e:
                 print(e, video_folder)
         return buf
 
-    def crop(self, buffer, n_frame, crop_size):
-        height_index = np.random.randint(buffer.shape[1] - crop_size)
-        width_index = np.random.randint(buffer.shape[2] - crop_size)
-
-        buffer = buffer[:, height_index:height_index + crop_size, width_index:width_index + crop_size, :]
-        return buffer
+    def crop(self, buf, crop_size):
+        height_index = np.random.randint(buf.shape[2] - crop_size)
+        width_index = np.random.randint(buf.shape[3] - crop_size)
+        buf = buf[:, :,  height_index:height_index + crop_size, width_index:width_index + crop_size]
+        return buf
 
 
 if __name__ == "__main__":
@@ -111,7 +98,7 @@ if __name__ == "__main__":
         n_frame=16)
 
     from torch.utils.data import DataLoader
-    train_loader = DataLoader(train_data, batch_size=8, shuffle=True, num_workers=1)
+    train_loader = DataLoader(train_data, batch_size=2, shuffle=True, num_workers=2)
     print('train_lodaer',len(train_loader))
 
     for idx, (buf, label) in enumerate(train_loader):

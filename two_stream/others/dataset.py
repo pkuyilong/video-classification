@@ -29,15 +29,18 @@ class VideoDataset(Dataset):
 
 
         print('init video_list')
-        self.video_list = [video for cls in os.listdir(os.path.join(self.root_dir, self.split)) for video in os.listdir(os.path.join(self.root_dir, self.split, cls))]
+        self.video_list = [video for cls in os.listdir(os.path.join(self.root_dir, self.split))
+                for video in os.listdir(os.path.join(self.root_dir, self.split, cls))]
 
         print('init video2path')
-        self.video2path = {video : os.path.join(self.root_dir, self.split, cls, video) \
-            for cls in os.listdir(os.path.join(self.root_dir, self.split)) for video in os.listdir(os.path.join(self.root_dir, self.split, cls)) }
+        self.video2path = {video : os.path.join(self.root_dir, self.split, cls, video)
+            for cls in os.listdir(os.path.join(self.root_dir, self.split))
+            for video in os.listdir(os.path.join(self.root_dir, self.split, cls)) }
 
         print('init video2label')
         self.video2label = {video : label \
-            for label, cls in enumerate(os.listdir(os.path.join(self.root_dir, split))) for video in os.listdir(os.path.join(self.root_dir, self.split, cls)) }
+            for label, cls in enumerate(os.listdir(os.path.join(self.root_dir, split)))
+            for video in os.listdir(os.path.join(self.root_dir, self.split, cls)) }
 
         np.random.shuffle(self.video_list)
 
@@ -45,12 +48,6 @@ class VideoDataset(Dataset):
         video = self.video_list[index]
         label = np.array(self.video2label[video])
         buf = self.load_frames(self.video2path[video], self.ty, self.n_frame)
-        #buf = self.crop(buf, self.n_frame, self.crop_size)
-
-        # if self.split == 'test':
-        #     buf = self.randomflip(buf)
-        # buf = self.normalize(buf)
-        # buf = self.to_tensor(buf)
         return torch.from_numpy(buf), torch.from_numpy(label)
 
     def __len__(self):
@@ -63,6 +60,10 @@ class VideoDataset(Dataset):
                 if name.startswith('rgb'):
                     buf = cv.imread(os.path.join(video_folder,name)).astype(np.float32)
                     buf = cv.resize(buf, (self.resize_height, self.resize_width))
+                    buf[..., 0] = buf[..., 0] - np.average(buf[..., 0])
+                    buf[..., 1] = buf[..., 1] - np.average(buf[..., 1]
+                    buf[..., 2] = buf[..., 2] - np.average(buf[..., 2]
+
                     start_height = np.random.randint(0, buf.shape[0] - self.crop_size + 1)
                     start_width = np.random.randint(0, buf.shape[1] - self.crop_size + 1)
                     buf = buf[start_height : start_height+self.crop_size,
@@ -73,15 +74,15 @@ class VideoDataset(Dataset):
         elif ty == 'flow':
             flowx_files = sorted([os.path.join(video_folder, name) for name in os.listdir(video_folder) if name.startswith('flowx')])
             flowy_files = sorted([os.path.join(video_folder, name) for name in os.listdir(video_folder) if name.startswith('flowy')])
-            buf = np.empty((self.resize_height, self.resize_width, n_frame), np.dtype('float32'))
 
+            buf = np.empty((self.resize_height, self.resize_width, n_frame), np.dtype('float32'))
             for idx, (flowx, flowy) in enumerate(zip(flowx_files, flowy_files)):
                 flow_x = cv.imread(flowx).astype(np.float32)
                 flow_y = cv.imread(flowy).astype(np.float32)
                 flow_x = cv.resize(flow_x, (self.resize_width, self.resize_height))
                 flow_y = cv.resize(flow_y, (self.resize_width, self.resize_height))
-                flow_x = np.average(flow_x, axis=2)
-                flow_y = np.average(flow_y, axis=2)
+                flow_x = np.max(flow_x, axis=2)
+                flow_y = np.max(flow_y, axis=2)
 
                 buf[:, :, 2*idx] = flow_x
                 buf[:, :, 2*idx+1] = flow_y
@@ -95,8 +96,6 @@ class VideoDataset(Dataset):
             raise ValueError('ty is not in rgb or flow')
 
     def randomflip(self, buffer):
-        """Horizontally flip the given image and ground truth randomly with a probability of 0.5."""
-
         if np.random.random() < 0.5:
             for i, frame in enumerate(buffer):
                 frame = cv.flip(buffer[i], flipCode=1)
@@ -110,10 +109,7 @@ class VideoDataset(Dataset):
             buffer[i] = frame
         return buffer
 
-    def to_tensor(self, buffer):
-        return buffer.transpose((3, 0, 1, 2))
-
-    # def crop(self, buffer, n_frame, crop_size):
+    # def _crop(self, buffer, n_frame, crop_size):
     #     height_index = np.random.randint(buffer.shape[1] - crop_size)
     #     width_index = np.random.randint(buffer.shape[2] - crop_size)
 
@@ -121,26 +117,8 @@ class VideoDataset(Dataset):
     #     return buffer
 
 if __name__ == "__main__":
-    # rgb_train_data = VideoDataset(
-    #     root_dir='/home/datasets/mayilong/PycharmProjects/p55/data/rgb_flow_300',
-    #     split_data='/home/datasets/mayilong/PycharmProjects/p55/data/split_data',
-    #     split='train',
-    #     ty='rgb',
-    #     n_frame=1)
-
-    # from torch.utils.data import DataLoader
-    # rgb_train_loader = DataLoader(rgb_train_data, batch_size=2, shuffle=True, num_workers=1)
-    # print('train_lodaer',len(rgb_train_loader))
-
-    # for idx, (buf, label) in enumerate(rgb_train_loader):
-    #     if idx == 3:
-    #         break
-    #     print('buf size is ', buf.size())
-    #     print('label is : ', label)
-
     print('#'*80)
-
-    flow_train_data = VideoDataset(
+    train_data = VideoDataset(
         root_dir='/home/datasets/mayilong/PycharmProjects/p55/data/rgb_flow_300',
         split_data='/home/datasets/mayilong/PycharmProjects/p55/data/split_data',
         split='train',
@@ -148,13 +126,12 @@ if __name__ == "__main__":
         n_frame=20)
 
     from torch.utils.data import DataLoader
-    flow_train_loader = DataLoader(flow_train_data, batch_size=2, shuffle=True, num_workers=1)
-    print('train_lodaer',len(flow_train_loader))
+    train_loader = DataLoader(train_data, batch_size=8, shuffle=True, num_workers=4)
+    print('train_lodaer',len(train_loader))
 
-    for idx, (buf, label) in enumerate(flow_train_loader):
+    for idx, (buf, label) in enumerate(train_loader):
         print('buf size is ', buf.size())
         print('label is : ', label)
 
-        if idx == 3:
-            break
-
+        # if idx == 3:
+        #     break

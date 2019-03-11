@@ -52,6 +52,9 @@ class VideoDataset(Dataset):
             if name.startswith('rgb'):
                 rgb_buf = cv.imread(os.path.join(video_folder,name)).astype(np.float32)
                 rgb_buf = cv.resize(rgb_buf, (self.resize_height, self.resize_width))
+                rgb_buf[..., 0] = rgb_buf[..., 0] - np.average(rgb_buf[..., 0])
+                rgb_buf[..., 1] = rgb_buf[..., 1] - np.average(rgb_buf[..., 1])
+                rgb_buf[..., 2] = rgb_buf[..., 2] - np.average(rgb_buf[..., 2])
                 start_height = np.random.randint(0, rgb_buf.shape[0] - self.crop_size + 1)
                 start_width = np.random.randint(0, rgb_buf.shape[1] - self.crop_size + 1)
                 rgb_buf = rgb_buf[start_height : start_height+self.crop_size,
@@ -88,8 +91,8 @@ class VideoDataset(Dataset):
             flow_y = cv.imread(flowy).astype(np.float32)
             flow_x = cv.resize(flow_x, (self.resize_width, self.resize_height))
             flow_y = cv.resize(flow_y, (self.resize_width, self.resize_height))
-            flow_x = np.average(flow_x, axis=2)
-            flow_y = np.average(flow_y, axis=2)
+            flow_x = np.max(flow_x, axis=2)
+            flow_y = np.max(flow_y, axis=2)
 
             flow_buf[:, :, 2*idx] = flow_x
             flow_buf[:, :, 2*idx+1] = flow_y
