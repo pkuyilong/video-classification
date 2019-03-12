@@ -7,7 +7,6 @@ import torch
 import numpy as np
 from torch.utils.data import DataLoader
 from model.C3D_model import C3D
-from model.C3D_scratch import C3D_S
 import torch.nn as nn
 import torch.optim as optim
 from dataset import VideoDataset
@@ -45,9 +44,10 @@ interval = 50
 
 # load trained model
 
-model = C3D(num_classes=7, pretrained=False)
-model.load_state_dict(torch.load('./trained_model/c3d_new_0.7200.pth'))
-print('load trained model by myself')
+model = C3D(num_classes=7, pretrained=True)
+# model = C3D(num_classes=7, pretrained=False)
+# model.load_state_dict(torch.load('./trained_model/c3d_new_0.7200.pth'))
+# print('load trained model by myself')
 
 model = model.to(device)
 
@@ -118,7 +118,7 @@ def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, 
                 record.write('[val-{}/{}] [acc-{:.4f}, loss-{:.4f}] [{}/{}]\n'.
                         format(epoch, n_epoch, corrects/total, total_loss/total, corrects, total))
 
-            if corrects/total >= 0.75:
+            if corrects/total >= 0.74:
                 try:
                     if not os.path.exists(model_dir):
                         os.makedirs(model_dir)

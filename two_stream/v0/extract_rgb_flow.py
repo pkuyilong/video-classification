@@ -18,13 +18,8 @@ def extract_videos(video_data_path):
             open('/home/datasets/mayilong/PycharmProjects/p55/resource/train_val_video2path.pkl', 'rb'))
     for split in os.listdir(video_data_path):
 
-        if split != 'val':
-            continue
-
         for txt_file in os.listdir(os.path.join(video_data_path, split)):
             cls = txt_file.split('.')[0]
-            if cls != 'game':
-                continue
             print('process {} - {}'.format(split, cls))
             handle = open(os.path.join(video_data_path, split, txt_file), 'r')
             for line in handle.readlines():
@@ -37,7 +32,6 @@ def extract_videos(video_data_path):
                     extract_rgb_flow(video2path[vdo_name], os.path.join(os.path.join(store_path, split, cls)))
                 except Exception as e:
                     print(e)
-
 
 def extract_rgb_flow(vdo_path, store_path):
     vdo_name = os.path.basename(vdo_path).split('.')[0]
@@ -79,10 +73,6 @@ def extract_rgb_flow(vdo_path, store_path):
                     flow = cv.calcOpticalFlowFarneback(prev_img_gray, cur_img_gray, None, 0.5, 3, 15, 3, 7, 1.5, 0)
                     flow_x = flow[..., 0]
                     flow_y = flow[..., 1]
-                    # print('x,', np.average(flow_x))
-                    # print('y,', np.average(flow_y))
-                    # flow_x = flow_x - np.average(flow_x)
-                    # flow_y = flow_y - np.average(flow_y)
                     cv.imwrite(os.path.join(store_path, vdo_name, 'flowx_{:03d}.jpeg'.format(idx - start_idx)), flow_x)
                     cv.imwrite(os.path.join(store_path, vdo_name, 'flowy_{:03d}.jpeg'.format(idx - start_idx)), flow_y)
                     prev_img_gray = cur_img_gray
@@ -101,5 +91,4 @@ def extract_rgb_flow(vdo_path, store_path):
 
 if __name__ == '__main__':
     print('*'*80)
-    # extract_rgb_flow('./1001947946.mp4', '/Users/alex/Projects')
     extract_videos(video_data_path)

@@ -24,15 +24,18 @@ class VideoDataset(Dataset):
 
 
         print('init video_list')
-        self.video_list = [video for cls in os.listdir(os.path.join(self.root_dir, self.split)) for video in os.listdir(os.path.join(self.root_dir, self.split, cls))]
+        self.video_list = [video for cls in os.listdir(os.path.join(self.root_dir, self.split))
+                for video in os.listdir(os.path.join(self.root_dir, self.split, cls))]
 
         print('init video2path')
-        self.video2path = {video : os.path.join(self.root_dir, self.split, cls, video) \
-            for cls in os.listdir(os.path.join(self.root_dir, self.split)) for video in os.listdir(os.path.join(self.root_dir, self.split, cls)) }
+        self.video2path = {video : os.path.join(self.root_dir, self.split, cls, video)
+            for cls in os.listdir(os.path.join(self.root_dir, self.split))
+            for video in os.listdir(os.path.join(self.root_dir, self.split, cls)) }
 
         print('init video2label')
         self.video2label = {video : label \
-            for label, cls in enumerate(os.listdir(os.path.join(self.root_dir, self.split))) for video in os.listdir(os.path.join(self.root_dir, self.split, cls)) }
+            for label, cls in enumerate(os.listdir(os.path.join(self.root_dir, self.split)))
+            for video in os.listdir(os.path.join(self.root_dir, self.split, cls)) }
 
         np.random.shuffle(self.video_list)
 
@@ -60,10 +63,13 @@ class VideoDataset(Dataset):
                 rgb_buf = rgb_buf[start_height : start_height+self.crop_size,
                         start_width : start_width+self.crop_size, :]
                 rgb_buf = rgb_buf.transpose(2, 0, 1)
+        if rgb_buf is None:
+            raise ValueError('not found any rgb images')
 
         flowx_files = sorted([os.path.join(video_folder, name) for name in os.listdir(video_folder) if name.startswith('flowx')])
         flowy_files = sorted([os.path.join(video_folder, name) for name in os.listdir(video_folder) if name.startswith('flowy')])
 
+        # check flowx and flowy  image
         cur_flowx_num = len(flowx_files)
         if cur_flowx_num == 0:
             print(video_folder, 'has no flowx frame')
@@ -87,12 +93,10 @@ class VideoDataset(Dataset):
         flow_buf = np.empty((self.resize_height, self.resize_width, 20), np.dtype('float32'))
 
         for idx, (flowx, flowy) in enumerate(zip(flowx_files, flowy_files)):
-            flow_x = cv.imread(flowx).astype(np.float32)
-            flow_y = cv.imread(flowy).astype(np.float32)
+            flow_x = cv.imread(flowx, 0).astype(np.float32)
+            flow_y = cv.imread(flowy, 0).astype(np.float32)
             flow_x = cv.resize(flow_x, (self.resize_width, self.resize_height))
             flow_y = cv.resize(flow_y, (self.resize_width, self.resize_height))
-            flow_x = np.max(flow_x, axis=2)
-            flow_y = np.max(flow_y, axis=2)
 
             flow_buf[:, :, 2*idx] = flow_x
             flow_buf[:, :, 2*idx+1] = flow_y

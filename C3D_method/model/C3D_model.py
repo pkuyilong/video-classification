@@ -96,7 +96,7 @@ class C3D(nn.Module):
                         "classifier.3.bias": "fc7.bias",
                         }
 
-        p_dict = torch.load('/home/datasets/mayilong/PycharmProjects/p55/rgb_stream/c3d_method/pretrained_model/c3d-pretrained.pth')
+        p_dict = torch.load('/home/datasets/mayilong/PycharmProjects/p55/C3D_method/pretrained_model/c3d-pretrained.pth')
         s_dict = self.state_dict()
         for name in p_dict:
             if name not in corresp_name:

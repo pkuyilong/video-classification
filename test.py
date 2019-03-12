@@ -8,7 +8,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from dataset import VideoDataset
-from model.C3D_model import C3D
 from torch.utils.data import DataLoader
 
 device = torch.device('cuda:1')
@@ -39,7 +38,7 @@ def test():
             test_corrects += torch.sum(preds == labels).item()
             print('{}/{}\n'.format(test_corrects,  (idx+1) * buf.size(0)))
 
-    print('test_acc-{:.4f}'.format(test_corrects / len(test_data))) 
+    print('test_acc-{:.4f}'.format(test_corrects / len(test_data)))
 
 if __name__ == '__main__':
     print('*'*80)
