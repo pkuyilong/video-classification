@@ -10,17 +10,18 @@ import torch.nn as nn
 import torch.optim as optim
 from torchvision import models
 from dataset import VideoDataset
+from model.model import Model
 
 device = torch.device('cuda:2')
 
 train_data = VideoDataset(
-    root_dir='/home/datasets/mayilong/PycharmProjects/p55/data/rgb_flow_300',
-    split_data='/home/datasets/mayilong/PycharmProjects/p55/data/split_data',
+    root_dir='/home/datasets/mayilong/PycharmProjects/p55/two_stream/v1/data/datasets',
+    split_data='/home/datasets/mayilong/PycharmProjects/p55/two_stream/data/split_data',
     split='train',
     )
 val_data = VideoDataset(
-    root_dir='/home/datasets/mayilong/PycharmProjects/p55/data/rgb_flow_300',
-    split_data='/home/datasets/mayilong/PycharmProjects/p55/data/split_data',
+    root_dir='/home/datasets/mayilong/PycharmProjects/p55/two_stream/v1/data/datasets',
+    split_data='/home/datasets/mayilong/PycharmProjects/p55/two_stream/data/split_data',
     split='val',
     )
 
@@ -28,38 +29,8 @@ train_loader = DataLoader(train_data, batch_size=16, shuffle=True, num_workers=4
 val_loader = DataLoader(val_data, batch_size=4, shuffle=True, num_workers=4)
 
 n_epoch = 150
-lr = 0.0001
+lr = 0.001
 interval = 50
-
-class Model(nn.Module):
-    def __init__(self, n_class):
-        super().__init__()
-        self.rgb_extractor = models.vgg16(pretrained=True).features
-        self.flow_extractor = models.vgg16(pretrained=True).features
-
-        old_param = self.flow_extractor[0].weight.data
-        old_param = torch.mean(old_param, dim=1, keepdim=True)
-        new_param = old_param.repeat(1, 20, 1, 1)
-        self.flow_extractor[0] = nn.Conv2d(20, 64, 3, 1, 1)
-        self.flow_extractor[0].weight.data = new_param
-
-        self.conv1 = nn.Conv2d(1024, 512, 3, 1)
-        self.conv2 = nn.Conv2d(512, 32, 3, 1)
-        self.fc = nn.Linear(32*3*3, n_class)
-
-    def forward(self, rgb_buf, flow_buf):
-        rgb_features = self.rgb_extractor(rgb_buf)
-        flow_features = self.flow_extractor(flow_buf)
-        features = torch.cat((rgb_features, flow_features), dim=1)
-        # print('features size ', features.size())
-        outputs = self.conv1(features)
-        # print('output1 size', outputs.size())
-        outputs = self.conv2(outputs)
-        # print('output2 size', outputs.size())
-        outputs = outputs.view(-1, 32*3*3)
-        # print('reshape size', outputs.size())
-        outputs = self.fc(outputs)
-        return outputs
 
 model = Model(7)
 model = model.to(device)

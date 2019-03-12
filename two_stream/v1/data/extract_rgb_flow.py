@@ -21,10 +21,11 @@ class Extractor():
         if not os.path.exists(self.save_dir):
             os.makedirs(self.save_dir)
 
+        self.record = open('./{}.txt'.format(os.path.basename(__file__).split('.')[0]), 'w+')
+
     def run(self):
-        record = open('./{}.txt'.format(os.path.basename(__file__).split('.')[0]), 'w+')
         for split in os.listdir(self.cls_root):
-            if split == 'train':
+            if split == 'test' or split == 'val':
                 continue
             if not os.path.exists(os.path.join(self.save_dir, split)):
                 os.mkdir(os.path.join(self.save_dir, split))
@@ -45,7 +46,7 @@ class Extractor():
                         self.rgb_flow_gen(vdo_name, os.path.join(self.save_dir, split, cls))
                     except Exception as e:
                         print(e)
-                        with open('./{}.txt'.format(os.path.basename(__file__).split('.')[0], 'a')) as record:
+                        with open('./{}.txt'.format(os.path.basename(__file__).split('.')[0], 'a+')) as record:
                             record.write('[Error] {}\n'.format(str(e)))
 
     def rgb_flow_gen(self, video, save_dir):
@@ -117,8 +118,8 @@ class Extractor():
             flow_x = flow[..., 0]
             flow_y = flow[..., 1]
 
-            cv.imwrite(os.path.join(save_dir, 'flow_x'+ str(i)+'.jpeg'), flow_x)
-            cv.imwrite(os.path.join(save_dir, 'flow_y'+ str(i)+'.jpeg'), flow_y)
+            cv.imwrite(os.path.join(save_dir, 'flowx_{:02d}.jpeg'.format(i-1)), flow_x)
+            cv.imwrite(os.path.join(save_dir, 'flowy_{:02d}.jpeg'.format(i-1)), flow_y)
             prev_gray = cur_gray
             cur_gray = None
 

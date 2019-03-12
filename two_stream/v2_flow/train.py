@@ -10,56 +10,27 @@ import torch.nn as nn
 import torch.optim as optim
 from torchvision import models
 from dataset import VideoDataset
+from model.model import Model
 
-device = torch.device('cuda:2')
+device = torch.device('cuda:1')
 
 train_data = VideoDataset(
-    root_dir='/home/datasets/mayilong/PycharmProjects/p55/data/rgb_flow_300',
-    split_data='/home/datasets/mayilong/PycharmProjects/p55/data/split_data',
+    root_dir='/home/datasets/mayilong/PycharmProjects/p55/two_stream/v1/data/datasets',
+    split_data='/home/datasets/mayilong/PycharmProjects/p55/two_stream/data/split_data',
     split='train',
     )
 val_data = VideoDataset(
-    root_dir='/home/datasets/mayilong/PycharmProjects/p55/data/rgb_flow_300',
-    split_data='/home/datasets/mayilong/PycharmProjects/p55/data/split_data',
+    root_dir='/home/datasets/mayilong/PycharmProjects/p55/two_stream/v1/data/datasets',
+    split_data='/home/datasets/mayilong/PycharmProjects/p55/two_stream/data/split_data',
     split='val',
     )
 
-train_loader = DataLoader(train_data, batch_size=16, shuffle=True, num_workers=4)
-val_loader = DataLoader(val_data, batch_size=4, shuffle=True, num_workers=4)
+train_loader = DataLoader(train_data, batch_size=32, shuffle=True, num_workers=4)
+val_loader = DataLoader(val_data, batch_size=16, shuffle=True, num_workers=4)
 
-n_epoch = 150
-lr = 0.00005
+n_epoch = 300
+lr = 0.0001
 interval = 50
-
-class Model(nn.Module):
-    def __init__(self, n_class):
-        super().__init__()
-        self.rgb_extractor = models.vgg16(pretrained=True).features
-        self.flow_extractor = models.vgg16(pretrained=True).features
-
-        old_param = self.flow_extractor[0].weight.data
-        old_param = torch.mean(old_param, dim=1, keepdim=True)
-        new_param = old_param.repeat(1, 20, 1, 1)
-        self.flow_extractor[0] = nn.Conv2d(20, 64, 3, 1, 1)
-        self.flow_extractor[0].weight.data = new_param
-
-        self.conv1 = nn.Conv2d(1024, 512, 3, 1)
-        self.conv2 = nn.Conv2d(512, 32, 3, 1)
-        self.fc = nn.Linear(32*3*3, n_class)
-
-    def forward(self, rgb_buf, flow_buf):
-        rgb_features = self.rgb_extractor(rgb_buf)
-        flow_features = self.flow_extractor(flow_buf)
-        features = torch.cat((rgb_features, flow_features), dim=1)
-        # print('features size ', features.size())
-        outputs = self.conv1(features)
-        # print('output1 size', outputs.size())
-        outputs = self.conv2(outputs)
-        # print('output2 size', outputs.size())
-        outputs = outputs.view(-1, 32*3*3)
-        # print('reshape size', outputs.size())
-        outputs = self.fc(outputs)
-        return outputs
 
 model = Model(7)
 model = model.to(device)
@@ -80,19 +51,20 @@ def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, 
         total = 0
         loss = 0
 
-        for idx, (rgb_buf, flow_buf, labels) in enumerate(train_loader):
-            rgb_buf = rgb_buf.to(device)
+        # for idx, (rgb_buf, flow_buf, labels) in enumerate(train_loader):
+        for idx, (flow_buf, labels) in enumerate(train_loader):
+            # rgb_buf = rgb_buf.to(device)
             flow_buf = flow_buf.to(device)
             labels = labels.to(device)
 
-            outputs = model(rgb_buf, flow_buf)
+            outputs = model(flow_buf)
             loss = criterion(outputs, labels)
 
             _, pred_label = torch.max(outputs, 1)
 
             total_loss += loss.item()
             corrects += torch.sum(pred_label == labels).item()
-            total += rgb_buf.size(0)
+            total += flow_buf.size(0)
 
             print('pred label', pred_label)
             print('true label', labels)
@@ -116,16 +88,15 @@ def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, 
             total = 0
             total_loss = 0
 
-            for idx, (rgb_buf, flow_buf, labels) in enumerate(val_loader):
-                rgb_buf = rgb_buf.to(device)
+            for idx, (flow_buf, labels) in enumerate(val_loader):
                 flow_buf = flow_buf.to(device)
                 labels = labels.to(device)
 
-                outputs = model(rgb_buf, flow_buf)
+                outputs = model(flow_buf)
 
                 loss = criterion(outputs, labels)
                 total_loss += loss.item()
-                total += rgb_buf.size(0)
+                total += flow_buf.size(0)
                 _, pred_labels = torch.max(outputs, 1)
                 corrects += torch.sum(pred_labels == labels).item()
 
