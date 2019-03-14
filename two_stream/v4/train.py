@@ -12,7 +12,7 @@ from torchvision import models
 from dataset import VideoDataset
 from model.model import Model
 
-device = torch.device('cuda:1')
+device = torch.device('cuda:2')
 
 root_dir = '/home/datasets/mayilong/PycharmProjects/p55/two_stream/datasets/dataset3/data'
 split_data = '/home/datasets/mayilong/PycharmProjects/p55/two_stream/dataset/split_data'
@@ -62,10 +62,12 @@ def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, 
             outputs = model(rgb_buf, flow_buf)
             loss = criterion(outputs, labels)
 
-            _, pred_label = torch.max(outputs, 1)
+            _, pred_labels = torch.max(outputs, 1)
+            print('pred labels ', pred_labels)
+            print('true labels ', labels)
 
             total_loss += loss.item()
-            corrects += torch.sum(pred_label == labels).item()
+            corrects += torch.sum(pred_labels == labels).item()
             total += rgb_buf.size(0)
 
             if (idx+1) %  interval == 0:

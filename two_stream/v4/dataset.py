@@ -90,7 +90,7 @@ class VideoDataset(Dataset):
                 flowy_files.append(flowy_files[-1])
                 need_to_fill -= 1
 
-        flow_buf = np.empty((self.resize_height, self.resize_width, 20), np.dtype('float32'))
+        flow_buf = np.empty((self.resize_height, self.resize_width, 10), np.dtype('float32'))
 
         for idx, (flowx, flowy) in enumerate(zip(flowx_files, flowy_files)):
             flow_x = cv.imread(flowx, 0).astype(np.float32)
@@ -98,13 +98,14 @@ class VideoDataset(Dataset):
             flow_x = cv.resize(flow_x, (self.resize_width, self.resize_height))
             flow_y = cv.resize(flow_y, (self.resize_width, self.resize_height))
 
-            flow_buf[:, :, 2*idx] = flow_x
-            flow_buf[:, :, 2*idx+1] = flow_y
+            flow = np.max((flow_x, flow_y), axis=0)
+            flow_buf[:, :, idx] = flow
 
         start_height = np.random.randint(0, flow_buf.shape[0] - self.crop_size + 1)
         start_width = np.random.randint(0, flow_buf.shape[1] - self.crop_size + 1)
         flow_buf = flow_buf[start_height : start_height+self.crop_size, start_width : start_width+self.crop_size, :]
         flow_buf = flow_buf.transpose(2, 0, 1)
+        flow_buf = flow_buf[np.newaxis, ...] 
         return (rgb_buf, flow_buf)
 
     def randomflip(self, buffer):
@@ -132,11 +133,16 @@ if __name__ == "__main__":
         split_data=split_data,
         split='val',
         )
+    test_data = VideoDataset(
+        root_dir=root_dir,
+        split_data=split_data,
+        split='test',
+        )
 
     train_loader = DataLoader(train_data, batch_size=16, shuffle=True, num_workers=4)
     val_loader = DataLoader(val_data, batch_size=16, shuffle=True, num_workers=4)
+    test_loader = DataLoader(test_data, batch_size=16, shuffle=True, num_workers=4)
 
-    val_loader = DataLoader(test_data, batch_size=8, shuffle=True, num_workers=1)
 
     print('test_lodaer',len(val_loader))
 

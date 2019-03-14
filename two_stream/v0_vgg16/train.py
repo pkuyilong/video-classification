@@ -27,7 +27,7 @@ val_data = VideoDataset(
 train_loader = DataLoader(train_data, batch_size=16, shuffle=True, num_workers=4)
 val_loader = DataLoader(val_data, batch_size=4, shuffle=True, num_workers=4)
 
-n_epoch = 150
+n_epoch = 300
 lr = 0.00005
 interval = 50
 

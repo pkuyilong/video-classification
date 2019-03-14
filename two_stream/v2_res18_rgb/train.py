@@ -14,36 +14,33 @@ from model.model import Model
 
 device = torch.device('cuda:1')
 
-root_dir = '/home/datasets/mayilong/PycharmProjects/p55/two_stream/datasets/dataset3/data'
-split_data = '/home/datasets/mayilong/PycharmProjects/p55/two_stream/dataset/split_data'
-
 train_data = VideoDataset(
-    root_dir=root_dir,
-    split_data=split_data,
+    root_dir='/home/datasets/mayilong/PycharmProjects/p55/two_stream/v1/data/datasets',
+    split_data='/home/datasets/mayilong/PycharmProjects/p55/two_stream/data/split_data',
     split='train',
     )
 val_data = VideoDataset(
-    root_dir=root_dir,
-    split_data=split_data,
+    root_dir='/home/datasets/mayilong/PycharmProjects/p55/two_stream/v1/data/datasets',
+    split_data='/home/datasets/mayilong/PycharmProjects/p55/two_stream/data/split_data',
     split='val',
     )
 
-train_loader = DataLoader(train_data, batch_size=16, shuffle=True, num_workers=4)
+train_loader = DataLoader(train_data, batch_size=32, shuffle=True, num_workers=4)
 val_loader = DataLoader(val_data, batch_size=16, shuffle=True, num_workers=4)
 
+n_epoch = 300
+lr = 0.0001
+interval = 50
 
 model = Model(7)
 model = model.to(device)
-
-n_epoch = 1000
-lr = 0.001
-interval = 50
 
 criterion = nn.CrossEntropyLoss()
 # optimizer = optim.SGD([{'params':rgb_model.model.classifier.parameters()}, {'params':flow_model.model.classifier.parameters()}], lr=lr, momentum=0.9, weight_decay=0.0005 )
 optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=0.0005 )
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.2, patience=5)
 # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.2, last_epoch=-1)
+
 def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, model_dir):
     print('Start trianning')
     record = open('./{}.txt'.format(os.path.basename(__file__).split('.')[0]), 'w+')
@@ -54,12 +51,11 @@ def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, 
         total = 0
         loss = 0
 
-        for idx, (rgb_buf, flow_buf, labels) in enumerate(train_loader):
+        for idx, (rgb_buf, labels) in enumerate(train_loader):
             rgb_buf = rgb_buf.to(device)
-            flow_buf = flow_buf.to(device)
             labels = labels.to(device)
 
-            outputs = model(rgb_buf, flow_buf)
+            outputs = model(rgb_buf)
             loss = criterion(outputs, labels)
 
             _, pred_label = torch.max(outputs, 1)
@@ -87,12 +83,11 @@ def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, 
             total = 0
             total_loss = 0
 
-            for idx, (rgb_buf, flow_buf, labels) in enumerate(val_loader):
+            for idx, (rgb_buf, labels) in enumerate(val_loader):
                 rgb_buf = rgb_buf.to(device)
-                flow_buf = flow_buf.to(device)
                 labels = labels.to(device)
 
-                outputs = model(rgb_buf, flow_buf)
+                outputs = model(rgb_buf)
 
                 loss = criterion(outputs, labels)
                 total_loss += loss.item()
@@ -108,13 +103,12 @@ def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, 
                 record.write('[val-{}/{}] [acc-{:.4f}, loss-{:.4f}] [{}/{}]\n'.
                         format(epoch, n_epoch, corrects/total, total_loss/total, corrects, total))
 
-            if corrects/total >= 0.88:
+            if corrects/total >= 0.70:
                 try:
                     if not os.path.exists(model_dir):
                         os.makedirs(model_dir)
 
-                    param_dict = {'epoch':epoch, 'state_dict':model.state_dict(), 'best_acc':corrects/total, 'optimizer_param':optimizer.state_dict()}
-                    torch.save(param_dict, os.path.join(model_dir,'two_stream_{:.4f}.pth'.format(corrects/total)))
+                    torch.save(model.state_dict(), os.path.join(model_dir,'two_stream_{:.4f}.pth'.format(corrects/total)))
 
                 except Exception as e:
                     print(str(e))
@@ -122,12 +116,10 @@ def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, 
                         record.write('[ERROR] ' + str(e) + '\n')
 
 if __name__ == '__main__':
-    model_dir = './trained_model'
-
     train_model(model,
                 n_epoch,
                 optimizer,
                 scheduler,
                 train_loader,
                 val_loader,
-                model_dir)
+                os.path.join(os.getcwd(), 'trained_model'))
