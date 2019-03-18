@@ -101,20 +101,20 @@ class VideoDataset(Dataset):
             flow = np.max((flow_x, flow_y), axis=0)
             flow_buf[:, :, idx] = flow
 
+            if np.random.random() < 0.5:
+                for idx in range(flow_buf.shape[2]):
+                    flow_buf[:, :, idx] = cv.flip(flow_buf[:, :, idx], flipCode=1)
+
         start_height = np.random.randint(0, flow_buf.shape[0] - self.crop_size + 1)
         start_width = np.random.randint(0, flow_buf.shape[1] - self.crop_size + 1)
         flow_buf = flow_buf[start_height : start_height+self.crop_size, start_width : start_width+self.crop_size, :]
         flow_buf = flow_buf.transpose(2, 0, 1)
-        flow_buf = flow_buf[np.newaxis, ...] 
+
+        flow_buf = flow_buf[np.newaxis, ...]
         return (rgb_buf, flow_buf)
 
-    def randomflip(self, buffer):
-        if np.random.random() < 0.5:
-            for i, frame in enumerate(buffer):
-                frame = cv.flip(buffer[i], flipCode=1)
-                buffer[i] = cv.flip(frame, flipCode=1)
 
-        return buffer
+        return buf
 
 if __name__ == "__main__":
     print('#'*80)

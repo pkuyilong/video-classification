@@ -36,7 +36,7 @@ model = Model(7)
 model = model.to(device)
 
 n_epoch = 1000
-lr = 0.001
+lr = 0.0001
 interval = 50
 
 criterion = nn.CrossEntropyLoss()

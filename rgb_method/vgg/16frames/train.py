@@ -11,18 +11,21 @@ import os
 from torchvision import models
 from dataset import VideoDataset
 
-device = torch.device('cuda:1')
+device = torch.device('cuda:3')
+
+root_dir='/home/datasets/mayilong/PycharmProjects/p55/C3D_method/datasets/dataset2/data'
+split_data='/home/datasets/mayilong/PycharmProjects/p55/C3D_method/datasets/dataset2/split_data'
 
 train_data = VideoDataset(
-    root_dir='/home/datasets/mayilong/PycharmProjects/p55/data/rgb',
-    split_data='/home/datasets/mayilong/PycharmProjects/p55/data/split_data',
+    root_dir=root_dir,
+    split_data=split_data,
     split='train',
     n_frame=16)
 train_loader = DataLoader(train_data, batch_size=32, shuffle=True, num_workers=1)
 
 val_data = VideoDataset(
-    root_dir='/home/datasets/mayilong/PycharmProjects/p55/data/rgb',
-    split_data='/home/datasets/mayilong/PycharmProjects/p55/data/split_data',
+    root_dir=root_dir,
+    split_data=split_data,
     split='val',
     n_frame=16)
 val_loader = DataLoader(val_data, batch_size=16, shuffle=True, num_workers=8)
