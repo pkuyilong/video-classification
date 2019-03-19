@@ -12,18 +12,19 @@ from torchvision import models
 from dataset import VideoDataset
 from model.model import Model
 
+
 device = torch.device('cuda:2')
 
-root_dir = '/home/datasets/mayilong/PycharmProjects/p55/two_stream/datasets/dataset3/data'
+dataset_path = '/home/datasets/mayilong/PycharmProjects/p55/two_stream/datasets/dataset3/data'
 split_data = '/home/datasets/mayilong/PycharmProjects/p55/two_stream/dataset/split_data'
 
 train_data = VideoDataset(
-    root_dir=root_dir,
+    dataset_path=dataset_path,
     split_data=split_data,
     split='train',
     )
 val_data = VideoDataset(
-    root_dir=root_dir,
+    dataset_path=dataset_path,
     split_data=split_data,
     split='val',
     )
@@ -110,7 +111,7 @@ def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, 
                 record.write('[val-{}/{}] [acc-{:.4f}, loss-{:.4f}] [{}/{}]\n'.
                         format(epoch, n_epoch, corrects/total, total_loss/total, corrects, total))
 
-            if corrects/total >= 0.88:
+            if corrects/total >= 0.84:
                 try:
                     if not os.path.exists(model_dir):
                         os.makedirs(model_dir)

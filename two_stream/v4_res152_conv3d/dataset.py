@@ -7,14 +7,14 @@ from torch.utils.data import Dataset,DataLoader
 
 
 class VideoDataset(Dataset):
-    def __init__(self, root_dir, split_data, split):
+    def __init__(self, dataset_path, split_data, split):
         """
-        root_dir : 存放数据的根目录
+        dataset_path : 存放数据的根目录
         split_data： 存放train val test的根目录
         split ：train  or val or test
         """
         super().__init__()
-        self.root_dir = root_dir
+        self.dataset_path = dataset_path
         self.split_data = split_data
         self.split = split
 
@@ -24,18 +24,18 @@ class VideoDataset(Dataset):
 
 
         print('init video_list')
-        self.video_list = [video for cls in os.listdir(os.path.join(self.root_dir, self.split))
-                for video in os.listdir(os.path.join(self.root_dir, self.split, cls))]
+        self.video_list = [video for cls in os.listdir(os.path.join(self.dataset_path, self.split))
+                for video in os.listdir(os.path.join(self.dataset_path, self.split, cls))]
 
         print('init video2path')
-        self.video2path = {video : os.path.join(self.root_dir, self.split, cls, video)
-            for cls in os.listdir(os.path.join(self.root_dir, self.split))
-            for video in os.listdir(os.path.join(self.root_dir, self.split, cls)) }
+        self.video2path = {video : os.path.join(self.dataset_path, self.split, cls, video)
+            for cls in os.listdir(os.path.join(self.dataset_path, self.split))
+            for video in os.listdir(os.path.join(self.dataset_path, self.split, cls)) }
 
         print('init video2label')
         self.video2label = {video : label \
-            for label, cls in enumerate(os.listdir(os.path.join(self.root_dir, self.split)))
-            for video in os.listdir(os.path.join(self.root_dir, self.split, cls)) }
+            for label, cls in enumerate(os.listdir(os.path.join(self.dataset_path, self.split)))
+            for video in os.listdir(os.path.join(self.dataset_path, self.split, cls)) }
 
         np.random.shuffle(self.video_list)
 
@@ -105,6 +105,7 @@ class VideoDataset(Dataset):
                 for idx in range(flow_buf.shape[2]):
                     flow_buf[:, :, idx] = cv.flip(flow_buf[:, :, idx], flipCode=1)
 
+
         start_height = np.random.randint(0, flow_buf.shape[0] - self.crop_size + 1)
         start_width = np.random.randint(0, flow_buf.shape[1] - self.crop_size + 1)
         flow_buf = flow_buf[start_height : start_height+self.crop_size, start_width : start_width+self.crop_size, :]
@@ -113,28 +114,26 @@ class VideoDataset(Dataset):
         flow_buf = flow_buf[np.newaxis, ...]
         return (rgb_buf, flow_buf)
 
-
-        return buf
-
 if __name__ == "__main__":
     print('#'*80)
 
-    root_dir = '/home/datasets/mayilong/PycharmProjects/p55/two_stream/datasets/dataset3/data'
+    dataset_path = '/home/datasets/mayilong/PycharmProjects/p55/two_stream/datasets/dataset3/data'
     split_data = '/home/datasets/mayilong/PycharmProjects/p55/two_stream/dataset/split_data'
 
+
     train_data = VideoDataset(
-        root_dir=root_dir,
+        dataset_path=dataset_path,
         split_data=split_data,
         split='train',
         )
 
     val_data = VideoDataset(
-        root_dir=root_dir,
+        dataset_path=dataset_path,
         split_data=split_data,
         split='val',
         )
     test_data = VideoDataset(
-        root_dir=root_dir,
+        dataset_path=dataset_path,
         split_data=split_data,
         split='test',
         )
@@ -143,8 +142,6 @@ if __name__ == "__main__":
     val_loader = DataLoader(val_data, batch_size=16, shuffle=True, num_workers=4)
     test_loader = DataLoader(test_data, batch_size=16, shuffle=True, num_workers=4)
 
-
-    print('test_lodaer',len(val_loader))
 
     for idx, (rgb_buf, flow_buf, label) in enumerate(val_loader):
         print('rgb_buf size is ', rgb_buf.size())

@@ -68,19 +68,19 @@ class Block(nn.Module):
         self.conv_a = nn.Sequential(
                 nn.Conv3d(1, 64, kernel_size=(2,3,3), stride=(2,3,3)),
                 nn.Conv3d(64, 512, kernel_size=(3,3,3), stride=(1,3,3)),
-                nn.Conv3d(512, 64, kernel_size=(3,3,3), stride=(3,3,3))
+                nn.Conv3d(512, 192, kernel_size=(3,3,3), stride=(3,3,3))
                 )
 
         self.conv_b = nn.Sequential(
                 nn.Conv3d(1, 64, kernel_size=(5,3,3), stride=(5,3,3)),
                 nn.Conv3d(64, 512, kernel_size=(2,3,3), stride=(1,3,3)),
-                nn.Conv3d(512, 64, kernel_size=(1, 3, 3), stride=(1,3,3))
+                nn.Conv3d(512, 192, kernel_size=(1, 3, 3), stride=(1,3,3))
                 )
 
         self.conv_c = nn.Sequential(
                 nn.Conv3d(1, 64, kernel_size=(10,3,3), stride=(10,3,3)),
                 nn.Conv3d(64, 512, kernel_size=(1, 3, 3), stride=(1, 3, 3)),
-                nn.Conv3d(512, 64, kernel_size=(1, 3, 3), stride=(1, 3, 3))
+                nn.Conv3d(512, 192, kernel_size=(1, 3, 3), stride=(1, 3, 3))
                 )
 
     def forward(self, img):
@@ -91,7 +91,6 @@ class Block(nn.Module):
         features = features.squeeze(dim=2)
         return features
 
-
 class Model(nn.Module):
     def __init__(self, n_class):
         super().__init__()
@@ -99,7 +98,8 @@ class Model(nn.Module):
         self.flow_extractor = Block()
         self.merger = Merge()
 
-        self.fc1 = nn.Linear(2*12288,  1024)
+        # self.fc1 = nn.Linear(2*12288,  1024)
+        self.fc1 = nn.Linear(49152,  1024)
         self.drop = nn.Dropout(0.5)
         self.fc2 = nn.Linear(1024, n_class)
         self.drop2 = nn.Dropout(0.5)
@@ -108,7 +108,7 @@ class Model(nn.Module):
         rgb_features = self.rgb_extractor(rgb_buf)
         flow_features = self.flow_extractor(flow_buf)
         features = self.merger.merge(rgb_features, flow_features)
-        features = features.view(features.size(0), 12288*2)
+        features = features.view(features.size(0), 49152)
 
         outputs = self.fc1(features)
         outputs = self.drop(outputs)
