@@ -33,7 +33,7 @@ class VideoDataset(Dataset):
 
         print('init video2label')
         self.video2label = {video : label \
-            for label, cls in enumerate(sorted(os.listdir(os.path.join(self.dataset_path, self.split))))
+            for label, cls in enumerate(os.listdir(os.path.join(self.dataset_path, self.split)))
             for video in os.listdir(os.path.join(self.dataset_path, self.split, cls)) }
 
         np.random.shuffle(self.video_list)

@@ -23,8 +23,9 @@ class VideoDataset(Dataset):
         self.crop_size = 224
 
         print('init video_list')
-        self.video_list = [video for cls in os.listdir(os.path.join(self.dataset_path, self.split))
-                for video in os.listdir(os.path.join(self.dataset_path, self.split, cls))]
+        # self.video_list = [video for cls in os.listdir(os.path.join(self.dataset_path, self.split))
+                # for video in os.listdir(os.path.join(self.dataset_path, self.split, cls))]
+        self.video_list = self.gen_video_list()
 
         print('init video2path')
         self.video2path = {video : os.path.join(self.dataset_path, self.split, cls, video)
@@ -33,10 +34,21 @@ class VideoDataset(Dataset):
 
         print('init video2label')
         self.video2label = {video : label \
-            for label, cls in enumerate(sorted(os.listdir(os.path.join(self.dataset_path, self.split))))
+            for label, cls in enumerate(os.listdir(os.path.join(self.dataset_path, self.split)))
             for video in os.listdir(os.path.join(self.dataset_path, self.split, cls)) }
 
         np.random.shuffle(self.video_list)
+
+    def gen_video_list(self):
+        video_list = list()
+        s = set()
+        for cls in os.listdir(os.path.join(self.dataset_path, self.split)):
+            for item in os.listdir(os.path.join(self.dataset_path, self.split, cls)):
+                video_name = item[:item.rfind('_')]
+                if video_name not in s:
+                    video_list.append(item)
+                    s.add(video_name)
+        return video_list
 
     def __getitem__(self, index):
         video = self.video_list[index]
@@ -139,6 +151,7 @@ if __name__ == "__main__":
     test_loader = DataLoader(test_data, batch_size=16, shuffle=True, num_workers=4)
 
 
+    print(len(val_data))
     for idx, (rgb_buf, flow_buf, label) in enumerate(val_loader):
         print('rgb_buf size is ', rgb_buf.size())
         print('flow_buf size is ', flow_buf.size())

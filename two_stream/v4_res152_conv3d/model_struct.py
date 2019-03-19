@@ -12,7 +12,7 @@ from torchsummary import summary
 from model.model import Model
 
 # device = torch.device('cpu')
-device = torch.device('cuda:3')
+device = torch.device('cuda:0')
 def test():
     model = Model(7).to(device)
     summary(model, [(3, 224, 224), (1, 10, 224, 224)])

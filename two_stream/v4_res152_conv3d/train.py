@@ -50,9 +50,9 @@ def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, 
     record = open('./{}.txt'.format(os.path.basename(__file__).split('.')[0]), 'w+')
     for epoch in range(n_epoch):
         model.train()
-        corrects = 0
-        total_loss = 0
-        total = 0
+        corrects_so_far = 0
+        loss_so_far = 0
+        count_so_far = 0
         loss = 0
 
         for idx, (rgb_buf, flow_buf, labels) in enumerate(train_loader):
@@ -67,28 +67,29 @@ def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, 
             print('pred labels ', pred_labels)
             print('true labels ', labels)
 
-            total_loss += loss.item()
-            corrects += torch.sum(pred_labels == labels).item()
-            total += rgb_buf.size(0)
+            loss_so_far += loss.item()
+            corrects_so_far += torch.sum(pred_labels == labels).item()
+            count_so_far += rgb_buf.size(0)
 
             if (idx+1) %  interval == 0:
-                print('[acc-{:.4f}, loss-{:.4f} [{}/{}]'.format(corrects/total, total_loss/total, corrects, total))
+                print('[acc-{:.4f}, loss-{:.4f} [{}/{}]'.format(corrects_so_far/count_so_far, loss_so_far/count_so_far, corrects_so_far, count_so_far))
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-        print('[train-{}/{}] [acc-{:.4f}, loss-{:.4f}] [{}/{}]\n'.format(epoch, n_epoch, corrects/total, total_loss/total, corrects, total))
+        print('[train-{}/{}] [acc-{:.4f}, loss-{:.4f}] [{}/{}]\n'.format(epoch, n_epoch, corrects_so_far/count_so_far, loss_so_far/count_so_far, corrects_so_far, count_so_far))
 
         with open('./{}.txt'.format(os.path.basename(__file__).split('.')[0]),  'a+') as record:
             record.write('[train-{}/{}] [acc-{:.4f}, loss-{:.4f}] [{}/{}]\n'.
-                    format(epoch, n_epoch, corrects/total, total_loss/total, corrects, total))
+                    format(epoch, n_epoch, corrects_so_far/count_so_far, loss_so_far/count_so_far, corrects_so_far, count_so_far))
 
         model.eval()
         with torch.no_grad():
-            corrects = 0
-            total = 0
-            total_loss = 0
+            corrects_so_far = 0
+            count_so_far = 0
+            loss_so_far = 0
+            best_acc = 0
 
             for idx, (rgb_buf, flow_buf, labels) in enumerate(val_loader):
                 rgb_buf = rgb_buf.to(device)
@@ -98,31 +99,39 @@ def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, 
                 outputs = model(rgb_buf, flow_buf)
 
                 loss = criterion(outputs, labels)
-                total_loss += loss.item()
-                total += rgb_buf.size(0)
+                loss_so_far += loss.item()
+                count_so_far += rgb_buf.size(0)
                 _, pred_labels = torch.max(outputs, 1)
-                corrects += torch.sum(pred_labels == labels).item()
+                corrects_so_far += torch.sum(pred_labels == labels).item()
 
             # may modify learning rate
             scheduler.step(loss)
-            print('[val-{}/{}] [acc-{:.4f}, loss-{:.4f}] [{}/{}]\n'.format(epoch, n_epoch, corrects/total, total_loss/total, corrects, total))
+            acc = corrects_so_far/count_so_far
+            print('[val-{}/{}] [acc-{:.4f}, loss-{:.4f}] [{}/{}]\n'.format(
+                epoch, n_epoch, acc, loss_so_far/count_so_far, corrects_so_far, count_so_far))
 
             with open(os.path.join(os.getcwd(), '{}.txt'.format(os.path.basename(__file__).split('.')[0])), 'a+') as record:
                 record.write('[val-{}/{}] [acc-{:.4f}, loss-{:.4f}] [{}/{}]\n'.
-                        format(epoch, n_epoch, corrects/total, total_loss/total, corrects, total))
+                        format(epoch, n_epoch, corrects_so_far/count_so_far, loss_so_far/count_so_far, corrects_so_far, count_so_far))
 
-            if corrects/total >= 0.84:
-                try:
-                    if not os.path.exists(model_dir):
-                        os.makedirs(model_dir)
+            if corrects_so_far/count_so_far >= 0.84:
+                if corrects_so_far/count_so_far > best_acc:
+                    best_acc = corrects_so_far/count_so_far
+                    try:
+                        if not os.path.exists(model_dir):
+                            os.makedirs(model_dir)
 
-                    param_dict = {'epoch':epoch, 'state_dict':model.state_dict(), 'best_acc':corrects/total, 'optimizer_param':optimizer.state_dict()}
-                    torch.save(param_dict, os.path.join(model_dir,'two_stream_{:.4f}.pth'.format(corrects/total)))
+                        param_dict = {'epoch':epoch,
+                                'state_dict':model.state_dict(),
+                                'best_acc':corrects_so_far/count_so_far,
+                                'optimizer_param':optimizer.state_dict()}
 
-                except Exception as e:
-                    print(str(e))
-                    with open(os.path.join(os.getcwd(), '{}.txt'.format(os.path.basename(__file__).split('.')[0])), 'a+') as record:
-                        record.write('[ERROR] ' + str(e) + '\n')
+                        torch.save(param_dict, os.path.join(model_dir,'two_stream_{:.4f}.pth'.format(corrects_so_far/count_so_far)))
+
+                    except Exception as e:
+                        print(str(e))
+                        with open(os.path.join(os.getcwd(), '{}.txt'.format(os.path.basename(__file__).split('.')[0])), 'a+') as record:
+                            record.write('[ERROR] ' + str(e) + '\n')
 
 if __name__ == '__main__':
     model_dir = './trained_model'
