@@ -55,7 +55,7 @@ class RGBExtrator(nn.Module):
             if type(child).__name__ == 'Linear' or type(child).__name__ == 'AvgPool2d':
                 continue
             self.model.add_module(name, child)
-        self.model.add_module('conv_1x1', nn.Conv2d(2048, 192, kernel_size=(1,1), stride=(1,1)))
+        self.model.add_module('conv_1x1', nn.Conv2d(2048, 384, kernel_size=(1,1), stride=(1,1)))
 
     def forward(self, buf):
         outputs = self.model(buf)
@@ -68,19 +68,19 @@ class Block(nn.Module):
         self.conv_a = nn.Sequential(
                 nn.Conv3d(1, 64, kernel_size=(2,3,3), stride=(2,3,3)),
                 nn.Conv3d(64, 512, kernel_size=(3,3,3), stride=(1,3,3)),
-                nn.Conv3d(512, 192, kernel_size=(3,3,3), stride=(3,3,3))
+                nn.Conv3d(512, 128, kernel_size=(3,3,3), stride=(3,3,3))
                 )
 
         self.conv_b = nn.Sequential(
                 nn.Conv3d(1, 64, kernel_size=(5,3,3), stride=(5,3,3)),
                 nn.Conv3d(64, 512, kernel_size=(2,3,3), stride=(1,3,3)),
-                nn.Conv3d(512, 192, kernel_size=(1, 3, 3), stride=(1,3,3))
+                nn.Conv3d(512, 128, kernel_size=(1, 3, 3), stride=(1,3,3))
                 )
 
         self.conv_c = nn.Sequential(
                 nn.Conv3d(1, 64, kernel_size=(10,3,3), stride=(10,3,3)),
                 nn.Conv3d(64, 512, kernel_size=(1, 3, 3), stride=(1, 3, 3)),
-                nn.Conv3d(512, 192, kernel_size=(1, 3, 3), stride=(1, 3, 3))
+                nn.Conv3d(512, 128, kernel_size=(1, 3, 3), stride=(1, 3, 3))
                 )
 
     def forward(self, img):
@@ -98,36 +98,35 @@ class Model(nn.Module):
         self.flow_extractor = Block()
         self.merger = Merge()
 
-        self.fc_1 = nn.Linear(49152,  1024)
-        self.drop_1 = nn.Dropout(0.5)
-        self.fc_2 = nn.Linear(1024, 1024)
-        self.drop_2 = nn.Dropout(0.5)
-        self.fc_3 = nn.Linear(1024, n_class)
+        self.fc1 = nn.Linear(2*2*12288,  1024)
+        self.drop = nn.Dropout(0.5)
+        self.fc2 = nn.Linear(1024, n_class)
+        self.drop2 = nn.Dropout(0.5)
 
     def forward(self, rgb_buf, flow_buf):
         rgb_features = self.rgb_extractor(rgb_buf)
         flow_features = self.flow_extractor(flow_buf)
         features = self.merger.merge(rgb_features, flow_features)
-        features = features.view(features.size(0), 49152)
+        features = features.view(features.size(0), 4*12288)
 
-        x = features
-        x = self.drop_1(self.fc_1(x))
-        x = self.drop_2(self.fc_2(x))
-        x = self.fc_3(x)
-        return x
+        outputs = self.fc1(features)
+        outputs = self.drop(outputs)
+        outputs = self.fc2(outputs)
+        return outputs
 
 if __name__ == '__main__':
     print('*'*80)
     img = torch.randn(1, 3, 224, 224).to(device)
     rgb_extractor = RGBExtrator().to(device)
     outputs = rgb_extractor(img)
-    print('RGB features size', outputs.size())
+    print(outputs.size())
 
     flow = torch.randn(1, 1, 10, 224,224).to(device)
     block = Block().to(device)
     outputs = block(flow)
-    print('Optical flow features size', outputs.size())
+    print(outputs.size())
 
     model = Model(7).to(device)
     outputs = model(img, flow)
-    print('Final result', outputs.size())
+    print(outputs.size())
+

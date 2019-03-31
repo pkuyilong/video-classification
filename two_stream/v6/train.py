@@ -12,8 +12,7 @@ from torchvision import models
 from dataset import VideoDataset
 from model.model import Model
 
-
-device = torch.device('cuda:1')
+device = torch.device('cuda:2')
 
 dataset_path = '/home/datasets/mayilong/PycharmProjects/p55/two_stream/datasets/dataset3/data'
 split_data = '/home/datasets/mayilong/PycharmProjects/p55/two_stream/dataset/split_data'
@@ -37,13 +36,13 @@ model = Model(7)
 model = model.to(device)
 
 n_epoch = 1000
-lr = 0.0005
+lr = 0.001
 interval = 50
 
 criterion = nn.CrossEntropyLoss()
 # optimizer = optim.SGD([{'params':rgb_model.model.classifier.parameters()}, {'params':flow_model.model.classifier.parameters()}], lr=lr, momentum=0.9, weight_decay=0.0005 )
 optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=0.0005 )
-scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.2, patience=5)
+scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.2, patience=2)
 def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, model_dir):
     print('Start trianning')
     record = open('./{}.txt'.format(os.path.basename(__file__).split('.')[0]), 'w+')

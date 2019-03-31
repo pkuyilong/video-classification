@@ -33,7 +33,7 @@ class VideoDataset(Dataset):
 
         print('init video2label')
         self.video2label = {video : label \
-            for label, cls in enumerate(sorted(os.listdir(os.path.join(self.dataset_path, self.split))))
+            for label, cls in enumerate(os.listdir(os.path.join(self.dataset_path, self.split)))
             for video in os.listdir(os.path.join(self.dataset_path, self.split, cls)) }
 
         np.random.shuffle(self.video_list)
@@ -49,8 +49,6 @@ class VideoDataset(Dataset):
 
     def load_frames(self, video_folder):
         # return 1 rgb and 20 optical flow
-        start_height = 0
-        start_width = 0
         rgb_buf = None
         for name in os.listdir(video_folder):
             if name.startswith('rgb'):
@@ -106,8 +104,8 @@ class VideoDataset(Dataset):
                 for idx in range(flow_buf.shape[2]):
                     flow_buf[:, :, idx] = cv.flip(flow_buf[:, :, idx], flipCode=1)
 
-        # start_height = np.random.randint(0, flow_buf.shape[0] - self.crop_size + 1)
-        # start_width = np.random.randint(0, flow_buf.shape[1] - self.crop_size + 1)
+        start_height = np.random.randint(0, flow_buf.shape[0] - self.crop_size + 1)
+        start_width = np.random.randint(0, flow_buf.shape[1] - self.crop_size + 1)
         flow_buf = flow_buf[start_height : start_height+self.crop_size, start_width : start_width+self.crop_size, :]
         flow_buf = flow_buf.transpose(2, 0, 1)
 
@@ -124,6 +122,7 @@ if __name__ == "__main__":
         split_data=split_data,
         split='train',
         )
+
     val_data = VideoDataset(
         dataset_path=dataset_path,
         split_data=split_data,

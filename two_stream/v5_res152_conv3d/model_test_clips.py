@@ -26,7 +26,7 @@ test_data = VideoDataset(
 test_loader = DataLoader(test_data, batch_size=16, shuffle=True, num_workers=4)
 
 model = Model(7).to(device)
-model.load_state_dict(torch.load('./trained_model/two_stream_0.8643.pth')['state_dict'])
+model.load_state_dict(torch.load('./trained_model/two_stream_0.8678.pth')['state_dict'])
 
 def predict():
     corrects_so_far = 0

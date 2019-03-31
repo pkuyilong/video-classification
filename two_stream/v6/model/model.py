@@ -51,7 +51,7 @@ class RGBExtrator(nn.Module):
     def __init__(self):
         super().__init__()
         self.model = nn.Sequential()
-        for name, child in models.resnet152(pretrained=True).named_children():
+        for name, child in models.resnet50(pretrained=True).named_children():
             if type(child).__name__ == 'Linear' or type(child).__name__ == 'AvgPool2d':
                 continue
             self.model.add_module(name, child)
@@ -99,9 +99,9 @@ class Model(nn.Module):
         self.merger = Merge()
 
         self.fc_1 = nn.Linear(49152,  1024)
-        self.drop_1 = nn.Dropout(0.5)
+        self.drop_1 = nn.Dropout(0.3)
         self.fc_2 = nn.Linear(1024, 1024)
-        self.drop_2 = nn.Dropout(0.5)
+        self.drop_2 = nn.Dropout(0.3)
         self.fc_3 = nn.Linear(1024, n_class)
 
     def forward(self, rgb_buf, flow_buf):
