@@ -5,6 +5,7 @@ import torch
 import numpy as np
 from torch.utils.data import Dataset,DataLoader
 
+
 class VideoDataset(Dataset):
     def __init__(self, dataset_path, split_data, split):
         """
@@ -105,6 +106,8 @@ class VideoDataset(Dataset):
                 for idx in range(flow_buf.shape[2]):
                     flow_buf[:, :, idx] = cv.flip(flow_buf[:, :, idx], flipCode=1)
 
+        # start_height = np.random.randint(0, flow_buf.shape[0] - self.crop_size + 1)
+        # start_width = np.random.randint(0, flow_buf.shape[1] - self.crop_size + 1)
         flow_buf = flow_buf[start_height : start_height+self.crop_size, start_width : start_width+self.crop_size, :]
         flow_buf = flow_buf.transpose(2, 0, 1)
 

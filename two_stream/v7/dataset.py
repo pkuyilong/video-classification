@@ -6,7 +6,7 @@ import numpy as np
 from torch.utils.data import Dataset,DataLoader
 
 class VideoDataset(Dataset):
-    def __init__(self, dataset_path, split_data, split, multi_scale=True):
+    def __init__(self, dataset_path, split_data, split, multi_scale=True, use_flip=True):
         """
         dataset_path : 存放数据的根目录
         split_data： 存放train val test的根目录
@@ -16,7 +16,8 @@ class VideoDataset(Dataset):
         self.dataset_path = dataset_path
         self.split_data = split_data
         self.split = split
-        self.multi_scale = True
+        self.multi_scale = multi_scale
+        self.use_flip=use_flip
 
         self.crop_size = 224
 
@@ -40,23 +41,20 @@ class VideoDataset(Dataset):
         video = self.video_list[index]
         label = np.array(self.video2label[video])
         rgb_buf, flow_buf = self.load_frames(self.video2path[video])
-        if self.split == 'train':
+        if self.use_flip:
             if np.random.randn() > 0.5:
                 self.horizon_flip(rgb_buf, flow_buf)
 
-        # print('origin', rgb_buf.shape, flow_buf.shape)
-        rgb_buf, flow_buf = self.random_crop(rgb_buf, flow_buf)
-        # print('crop', rgb_buf.shape, flow_buf.shape)
+        rgb_buf, flow_buf = self.center_crop(rgb_buf, flow_buf)
 
         rgb_buf, flow_buf = self.to_tensor(rgb_buf, flow_buf)
-        # print('to tensor', rgb_buf.shape, flow_buf.shape)
         return torch.from_numpy(rgb_buf), torch.from_numpy(flow_buf), torch.from_numpy(label)
 
     def __len__(self):
         return len(self.video_list)
 
     def load_frames(self, video_folder):
-        # return 1 rgb and 32 optical flow
+        # return 1 rgb and 16 optical flow
         start_height, start_width = 0, 0
         resize_width, resize_height = 0, 0
         flowx_files, flowy_files = list(), list()
@@ -68,8 +66,8 @@ class VideoDataset(Dataset):
                 height = rgb_buf.shape[0]
 
                 if self.multi_scale:
-                    resize_height = np.random.randint(360, height)
-                    resize_width = int(resize_height / height * width) if int(resize_height / height * width) > 360 else 360
+                    resize_height = np.random.randint(256, 336)
+                    resize_width = np.random.randint(256, 336)
                 else:
                     resize_height = 280
                     resize_width = 280
@@ -79,10 +77,7 @@ class VideoDataset(Dataset):
                 rgb_buf[..., 1] = rgb_buf[..., 1] - np.average(rgb_buf[..., 1])
                 rgb_buf[..., 2] = rgb_buf[..., 2] - np.average(rgb_buf[..., 2])
 
-        if rgb_buf is None:
-            raise ValueError('not found any rgb images')
-
-        start_idx = np.random.randint(0, 16)
+        start_idx = 0
         for file_name in os.listdir(video_folder):
             if file_name.startswith('flowx'):
                 flowx_files.append(os.path.join(video_folder, file_name))
@@ -112,10 +107,12 @@ class VideoDataset(Dataset):
             flow_buf[:,:,idx] = cv.flip(flow_buf[:,:,idx], 1)
         return (rgb_buf, flow_buf)
 
-    def random_crop(self, rgb_buf, flow_buf):
+    def center_crop(self, rgb_buf, flow_buf):
         # [224, 224, 3] [224, 224, 16]
-        start_height = np.random.randint(0, rgb_buf.shape[0] - self.crop_size + 1)
-        start_width = np.random.randint(0, rgb_buf.shape[1] - self.crop_size + 1)
+        # start_height = np.random.randint(0, rgb_buf.shape[0] - self.crop_size + 1) # start_width = np.random.randint(0, rgb_buf.shape[1] - self.crop_size + 1)
+        start_height = (rgb_buf.shape[0] - self.crop_size) // 2
+        start_width = (rgb_buf.shape[1] - self.crop_size) // 2
+
         rgb_buf = rgb_buf[start_height:start_height+self.crop_size, start_width:start_width+self.crop_size, :]
         flow_buf = flow_buf[start_height:start_height+self.crop_size, start_width:start_width+self.crop_size, :]
         return (rgb_buf, flow_buf)
@@ -136,23 +133,26 @@ if __name__ == "__main__":
         dataset_path=dataset_path,
         split_data=split_data,
         split='train',
-        multi_scale=True
+        multi_scale=True,
+        use_flip=True
         )
     val_data = VideoDataset(
         dataset_path=dataset_path,
         split_data=split_data,
         split='val',
-        multi_scale=False
+        multi_scale=False,
+        use_flip=False
         )
     test_data = VideoDataset(
         dataset_path=dataset_path,
         split_data=split_data,
         split='test',
-        multi_scale=False
+        multi_scale=False,
+        use_flip=False
         )
 
     train_loader = DataLoader(train_data, batch_size=16, shuffle=True, num_workers=4)
-    val_loader = DataLoader(val_data, batch_size=1, shuffle=True, num_workers=1)
+    val_loader = DataLoader(val_data, batch_size=16, shuffle=True, num_workers=4)
     test_loader = DataLoader(test_data, batch_size=16, shuffle=True, num_workers=4)
 
 

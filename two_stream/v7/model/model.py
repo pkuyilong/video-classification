@@ -68,19 +68,19 @@ class Block(nn.Module):
         self.conv_a = nn.Sequential(
                 nn.Conv3d(1, 64, kernel_size=(4,3,3), stride=(2,3,3)),
                 nn.Conv3d(64, 512, kernel_size=(3,3,3), stride=(1,3,3)),
-                nn.Conv3d(512, 192, kernel_size=(3,3,3), stride=(2,3,3))
+                nn.Conv3d(512, 64, kernel_size=(3,3,3), stride=(2,3,3))
                 )
 
         self.conv_b = nn.Sequential(
                 nn.Conv3d(1, 64, kernel_size=(8,3,3), stride=(4,3,3)),
                 nn.Conv3d(64, 512, kernel_size=(2,3,3), stride=(1,3,3)),
-                nn.Conv3d(512, 192, kernel_size=(1, 3, 3), stride=(1,3,3))
+                nn.Conv3d(512, 64, kernel_size=(1, 3, 3), stride=(1,3,3))
                 )
 
         self.conv_c = nn.Sequential(
                 nn.Conv3d(1, 64, kernel_size=(12,3,3), stride=(4,3,3)),
                 nn.Conv3d(64, 512, kernel_size=(1, 3, 3), stride=(1, 3, 3)),
-                nn.Conv3d(512, 192, kernel_size=(1, 3, 3), stride=(1, 3, 3))
+                nn.Conv3d(512, 64, kernel_size=(1, 3, 3), stride=(1, 3, 3))
                 )
 
     def forward(self, img):
@@ -102,7 +102,7 @@ class Model(nn.Module):
         self.flow_extractor = Block()
         self.merger = Merge()
 
-        self.fc_1 = nn.Linear(86016,  1024)
+        self.fc_1 = nn.Linear(36864,  1024)
         self.drop_1 = nn.Dropout(0.3)
         self.fc_2 = nn.Linear(1024, 1024)
         self.drop_2 = nn.Dropout(0.3)
@@ -112,7 +112,7 @@ class Model(nn.Module):
         rgb_features = self.rgb_extractor(rgb_buf)
         flow_features = self.flow_extractor(flow_buf)
         features = self.merger.merge(rgb_features, flow_features)
-        features = features.view(features.size(0), 86016)
+        features = features.view(features.size(0), 36864)
 
         x = features
         x = self.drop_1(self.fc_1(x))
