@@ -7,9 +7,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torchvision import models
-from torchsummary import summary
 
-device = torch.device('cuda:0')
+device = torch.device('cuda:1')
 
 class Merge():
     def __init__(self):
@@ -67,29 +66,33 @@ class Block(nn.Module):
         super().__init__()
 
         self.conv_a = nn.Sequential(
-                nn.Conv3d(1, 64, kernel_size=(2,3,3), stride=(2,3,3)),
+                nn.Conv3d(1, 64, kernel_size=(4,3,3), stride=(2,3,3)),
                 nn.Conv3d(64, 512, kernel_size=(3,3,3), stride=(1,3,3)),
-                nn.Conv3d(512, 192, kernel_size=(3,3,3), stride=(3,3,3))
+                nn.Conv3d(512, 64, kernel_size=(3,3,3), stride=(2,3,3))
                 )
 
         self.conv_b = nn.Sequential(
-                nn.Conv3d(1, 64, kernel_size=(5,3,3), stride=(5,3,3)),
+                nn.Conv3d(1, 64, kernel_size=(8,3,3), stride=(4,3,3)),
                 nn.Conv3d(64, 512, kernel_size=(2,3,3), stride=(1,3,3)),
-                nn.Conv3d(512, 192, kernel_size=(1, 3, 3), stride=(1,3,3))
+                nn.Conv3d(512, 64, kernel_size=(1, 3, 3), stride=(1,3,3))
                 )
 
         self.conv_c = nn.Sequential(
-                nn.Conv3d(1, 64, kernel_size=(10,3,3), stride=(10,3,3)),
+                nn.Conv3d(1, 64, kernel_size=(12,3,3), stride=(4,3,3)),
                 nn.Conv3d(64, 512, kernel_size=(1, 3, 3), stride=(1, 3, 3)),
-                nn.Conv3d(512, 192, kernel_size=(1, 3, 3), stride=(1, 3, 3))
+                nn.Conv3d(512, 64, kernel_size=(1, 3, 3), stride=(1, 3, 3))
                 )
 
     def forward(self, img):
         output_a = self.conv_a(img)
         output_b = self.conv_b(img)
         output_c = self.conv_c(img)
+        # print('oa, ', output_a.size())
+        # print('ob, ', output_b.size())
+        # print('oc, ', output_c.size())
         features = torch.cat((output_a, output_b, output_c), dim=1)
-        features = features.squeeze(dim=2)
+        features = features.view(img.size(0), -1, 8, 8)
+        # print('features', features.size())
         return features
 
 class Model(nn.Module):
@@ -99,7 +102,7 @@ class Model(nn.Module):
         self.flow_extractor = Block()
         self.merger = Merge()
 
-        self.fc_1 = nn.Linear(49152,  1024)
+        self.fc_1 = nn.Linear(36864,  1024)
         self.drop_1 = nn.Dropout(0.3)
         self.fc_2 = nn.Linear(1024, 1024)
         self.drop_2 = nn.Dropout(0.3)
@@ -109,7 +112,7 @@ class Model(nn.Module):
         rgb_features = self.rgb_extractor(rgb_buf)
         flow_features = self.flow_extractor(flow_buf)
         features = self.merger.merge(rgb_features, flow_features)
-        features = features.view(features.size(0), 49152)
+        features = features.view(features.size(0), 36864)
 
         x = features
         x = self.drop_1(self.fc_1(x))
@@ -118,18 +121,17 @@ class Model(nn.Module):
         return x
 
 if __name__ == '__main__':
-    # print('*'*80)
-    # img = torch.randn(1, 3, 224, 224).to(device)
-    # rgb_extractor = RGBExtrator().to(device)
-    # outputs = rgb_extractor(img)
-    # print('RGB features size', outputs.size())
+    print('*'*80)
+    img = torch.randn(1, 3, 224, 224).to(device)
+    rgb_extractor = RGBExtrator().to(device)
+    outputs = rgb_extractor(img)
+    print('RGB features size', outputs.size())
 
-    flow = torch.randn(1, 1, 10, 224,224).to(device)
+    flow = torch.randn(1, 1, 16, 224,224).to(device)
     block = Block().to(device)
     outputs = block(flow)
     print('Optical flow features size', outputs.size())
-    summary(block, (1, 10, 224, 224))
 
-    # model = Model(7).to(device)
-    # outputs = model(img, flow)
-    # print('Final result', outputs.size())
+    model = Model(7).to(device)
+    outputs = model(img, flow)
+    print('Final result', outputs.size())

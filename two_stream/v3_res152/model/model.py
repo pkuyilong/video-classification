@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torchvision import models
+
 class Merge():
     def __init__(self):
         super().__init__()
@@ -50,7 +51,6 @@ class Merge():
                 outputs = torch.cat((min_buf, max_buf), dim=1)
                 print(outputs.size())
                 return outputs
-
 
 class RGBExtrator(nn.Module):
     def __init__(self):

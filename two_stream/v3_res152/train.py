@@ -14,14 +14,15 @@ from model.model import Model
 
 device = torch.device('cuda:1')
 
-root_dir = '/home/datasets/mayilong/PycharmProjects/p55/two_stream/datasets/dataset3/data'
-split_data = '/home/datasets/mayilong/PycharmProjects/p55/two_stream/dataset/split_data'
+root_dir = '/home/datasets/mayilong/data_warehouse/two_stream_data/dataset3/data'
+split_data = '/home/datasets/mayilong/data_warehouse/two_stream_data/dataset3/split_data'
 
 train_data = VideoDataset(
     root_dir=root_dir,
     split_data=split_data,
     split='train',
     )
+
 val_data = VideoDataset(
     root_dir=root_dir,
     split_data=split_data,
@@ -31,19 +32,16 @@ val_data = VideoDataset(
 train_loader = DataLoader(train_data, batch_size=16, shuffle=True, num_workers=4)
 val_loader = DataLoader(val_data, batch_size=16, shuffle=True, num_workers=4)
 
-
 model = Model(7)
 model = model.to(device)
 
 n_epoch = 1000
-lr = 0.001
+lr = 0.0001
 interval = 50
 
 criterion = nn.CrossEntropyLoss()
-# optimizer = optim.SGD([{'params':rgb_model.model.classifier.parameters()}, {'params':flow_model.model.classifier.parameters()}], lr=lr, momentum=0.9, weight_decay=0.0005 )
 optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=0.0005 )
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.2, patience=5)
-# scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.2, last_epoch=-1)
 def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, model_dir):
     print('Start trianning')
     record = open('./{}.txt'.format(os.path.basename(__file__).split('.')[0]), 'w+')

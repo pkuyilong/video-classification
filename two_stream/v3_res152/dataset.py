@@ -5,7 +5,6 @@ import torch
 import numpy as np
 from torch.utils.data import Dataset,DataLoader
 
-
 class VideoDataset(Dataset):
     def __init__(self, root_dir, split_data, split):
         """
@@ -118,29 +117,29 @@ class VideoDataset(Dataset):
 if __name__ == "__main__":
     print('#'*80)
 
-    root_dir = '/home/datasets/mayilong/PycharmProjects/p55/two_stream/datasets/dataset3/data'
-    split_data = '/home/datasets/mayilong/PycharmProjects/p55/two_stream/dataset/split_data'
-
+    root_dir = '/home/datasets/mayilong/data_warehouse/two_stream_data/dataset3/data'
+    split_data = '/home/datasets/mayilong/data_warehouse/two_stream_data/dataset3/split_data'
     train_data = VideoDataset(
         root_dir=root_dir,
         split_data=split_data,
         split='train',
         )
-
     val_data = VideoDataset(
         root_dir=root_dir,
         split_data=split_data,
         split='val',
         )
+    test_data = VideoDataset(
+        root_dir=root_dir,
+        split_data=split_data,
+        split='test',
+        )
 
     train_loader = DataLoader(train_data, batch_size=16, shuffle=True, num_workers=4)
     val_loader = DataLoader(val_data, batch_size=16, shuffle=True, num_workers=4)
+    test_loader = DataLoader(test_data, batch_size=4, shuffle=True, num_workers=4)
 
-    val_loader = DataLoader(test_data, batch_size=8, shuffle=True, num_workers=1)
-
-    print('test_lodaer',len(val_loader))
-
-    for idx, (rgb_buf, flow_buf, label) in enumerate(val_loader):
+    for idx, (rgb_buf, flow_buf, label) in enumerate(test_loader):
         print('rgb_buf size is ', rgb_buf.size())
         print('flow_buf size is ', flow_buf.size())
         print('label is : ', label)
