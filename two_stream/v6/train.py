@@ -108,7 +108,8 @@ def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, 
             print('[val-{}/{}] [acc-{:.4f}, loss-{:.4f}] [{}/{}]\n'.format(
                 epoch, n_epoch, acc, loss_so_far/count_so_far, corrects_so_far, count_so_far))
 
-            with open(os.path.join(os.getcwd(), '{}.txt'.format(os.path.basename(__file__).split('.')[0])), 'a+') as record:
+            record_file = os.path.join(os.getcwd(), '{}.txt'.format(os.path.basename(__file__).split('.')[0]))
+            with open(record_file, "a+") as record:
                 record.write('[val-{}/{}] [acc-{:.4f}, loss-{:.4f}] [{}/{}]\n'.
                         format(epoch, n_epoch, corrects_so_far/count_so_far, loss_so_far/count_so_far, corrects_so_far, count_so_far))
 

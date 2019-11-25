@@ -58,7 +58,7 @@ class VideoDataset(Dataset):
             buf = None
             for name in os.listdir(video_folder):
                 if name.startswith('rgb'):
-                    buf = cv.imread(os.path.join(video_folder,name)).astype(np.float32)
+                    buf = cv.imread(os.path.join(video_folder, name)).astype(np.float32)
                     buf = cv.resize(buf, (self.resize_height, self.resize_width))
                     buf[..., 0] = buf[..., 0] - np.average(buf[..., 0])
                     buf[..., 1] = buf[..., 1] - np.average(buf[..., 1]

@@ -19,6 +19,7 @@ def gen_split_data_label(split_data_root,  rgb_root, split, store_pos):
         # print(os.path.join(split_data_root, split+'_data', txt_file))
         file_handle = open(os.path.join(split_data_root, split+'_data', txt_file), 'r+')
         for line in file_handle.readlines():
+            line = line.strip()
             unsplit_video2label[line.split(' ')[0].strip()] = line.split(' ')[1].strip()
 
     split_video2label = dict()
@@ -30,6 +31,7 @@ def gen_split_data_label(split_data_root,  rgb_root, split, store_pos):
 
     with open(os.path.join(store_pos, '{}_video2label.pkl'.format(split)), 'wb') as f:
         pickle.dump(split_video2label, f)
+
 
 if __name__ == '__main__':
     print('*'*80)
