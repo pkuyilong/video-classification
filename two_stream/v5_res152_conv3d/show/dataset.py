@@ -1,9 +1,9 @@
 import os
+
 import cv2 as cv
 import numpy as np
 import torch
-import numpy as np
-from torch.utils.data import Dataset,DataLoader
+from torch.utils.data import Dataset, DataLoader
 
 
 class VideoDataset(Dataset):
@@ -24,17 +24,17 @@ class VideoDataset(Dataset):
 
         print('init video_list')
         self.video_list = [video for cls in os.listdir(os.path.join(self.dataset_path, self.split))
-                for video in os.listdir(os.path.join(self.dataset_path, self.split, cls))]
+                           for video in os.listdir(os.path.join(self.dataset_path, self.split, cls))]
 
         print('init video2path')
-        self.video2path = {video : os.path.join(self.dataset_path, self.split, cls, video)
-            for cls in os.listdir(os.path.join(self.dataset_path, self.split))
-            for video in os.listdir(os.path.join(self.dataset_path, self.split, cls)) }
+        self.video2path = {video: os.path.join(self.dataset_path, self.split, cls, video)
+                           for cls in os.listdir(os.path.join(self.dataset_path, self.split))
+                           for video in os.listdir(os.path.join(self.dataset_path, self.split, cls))}
 
         print('init video2label')
-        self.video2label = {video : label \
-            for label, cls in enumerate(os.listdir(os.path.join(self.dataset_path, self.split)))
-            for video in os.listdir(os.path.join(self.dataset_path, self.split, cls)) }
+        self.video2label = {video: label \
+                            for label, cls in enumerate(os.listdir(os.path.join(self.dataset_path, self.split)))
+                            for video in os.listdir(os.path.join(self.dataset_path, self.split, cls))}
 
         np.random.shuffle(self.video_list)
 
@@ -52,21 +52,23 @@ class VideoDataset(Dataset):
         rgb_buf = None
         for name in os.listdir(video_folder):
             if name.startswith('rgb'):
-                rgb_buf = cv.imread(os.path.join(video_folder,name)).astype(np.float32)
+                rgb_buf = cv.imread(os.path.join(video_folder, name)).astype(np.float32)
                 rgb_buf = cv.resize(rgb_buf, (self.resize_height, self.resize_width))
                 rgb_buf[..., 0] = rgb_buf[..., 0] - np.average(rgb_buf[..., 0])
                 rgb_buf[..., 1] = rgb_buf[..., 1] - np.average(rgb_buf[..., 1])
                 rgb_buf[..., 2] = rgb_buf[..., 2] - np.average(rgb_buf[..., 2])
                 start_height = np.random.randint(0, rgb_buf.shape[0] - self.crop_size + 1)
                 start_width = np.random.randint(0, rgb_buf.shape[1] - self.crop_size + 1)
-                rgb_buf = rgb_buf[start_height : start_height+self.crop_size,
-                        start_width : start_width+self.crop_size, :]
+                rgb_buf = rgb_buf[start_height: start_height + self.crop_size,
+                          start_width: start_width + self.crop_size, :]
                 rgb_buf = rgb_buf.transpose(2, 0, 1)
         if rgb_buf is None:
             raise ValueError('not found any rgb images')
 
-        flowx_files = sorted([os.path.join(video_folder, name) for name in os.listdir(video_folder) if name.startswith('flowx')])
-        flowy_files = sorted([os.path.join(video_folder, name) for name in os.listdir(video_folder) if name.startswith('flowy')])
+        flowx_files = sorted(
+            [os.path.join(video_folder, name) for name in os.listdir(video_folder) if name.startswith('flowx')])
+        flowy_files = sorted(
+            [os.path.join(video_folder, name) for name in os.listdir(video_folder) if name.startswith('flowy')])
 
         # check flowx and flowy  image
         cur_flowx_num = len(flowx_files)
@@ -106,14 +108,15 @@ class VideoDataset(Dataset):
 
         start_height = np.random.randint(0, flow_buf.shape[0] - self.crop_size + 1)
         start_width = np.random.randint(0, flow_buf.shape[1] - self.crop_size + 1)
-        flow_buf = flow_buf[start_height : start_height+self.crop_size, start_width : start_width+self.crop_size, :]
+        flow_buf = flow_buf[start_height: start_height + self.crop_size, start_width: start_width + self.crop_size, :]
         flow_buf = flow_buf.transpose(2, 0, 1)
 
         flow_buf = flow_buf[np.newaxis, ...]
         return (rgb_buf, flow_buf)
 
+
 if __name__ == "__main__":
-    print('#'*80)
+    print('#' * 80)
     dataset_path = '/home/datasets/mayilong/PycharmProjects/p55/two_stream/datasets/dataset3/data'
     split_data = '/home/datasets/mayilong/PycharmProjects/p55/two_stream/dataset/split_data'
 
@@ -121,23 +124,22 @@ if __name__ == "__main__":
         dataset_path=dataset_path,
         split_data=split_data,
         split='train',
-        )
+    )
 
     val_data = VideoDataset(
         dataset_path=dataset_path,
         split_data=split_data,
         split='val',
-        )
+    )
     test_data = VideoDataset(
         dataset_path=dataset_path,
         split_data=split_data,
         split='test',
-        )
+    )
 
     train_loader = DataLoader(train_data, batch_size=16, shuffle=True, num_workers=4)
     val_loader = DataLoader(val_data, batch_size=16, shuffle=True, num_workers=4)
     test_loader = DataLoader(test_data, batch_size=16, shuffle=True, num_workers=4)
-
 
     for idx, (rgb_buf, flow_buf, label) in enumerate(val_loader):
         print('rgb_buf size is ', rgb_buf.size())

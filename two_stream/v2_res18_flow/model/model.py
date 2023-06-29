@@ -3,11 +3,11 @@
 # vim:fenc=utf-8
 #
 
-import numpy as np
 import torch
 import torch.nn as nn
-import torch.optim as optim
 from torchvision import models
+
+
 class Merge():
     def __init__(self):
         super().__init__()
@@ -39,9 +39,9 @@ class Merge():
                     if gap == 2:
                         min_buf = nn.ReplicationPad2d((1, 1, 1, 1))(min_buf)
                     else:
-                        min_buf =  nn.ReplicationPad2d((0, 1, 0, 1))(min_buf)
+                        min_buf = nn.ReplicationPad2d((0, 1, 0, 1))(min_buf)
                 elif max_buf.size(2) / min_buf.size()[2] == 2.0:
-                        max_buf = nn.MaxPool2d(kernel_size=(2,2), stride=(2,2))(max_buf)
+                    max_buf = nn.MaxPool2d(kernel_size=(2, 2), stride=(2, 2))(max_buf)
                 else:
                     raise RuntimeError('Cant do anything')
 
@@ -101,26 +101,21 @@ class Model(nn.Module):
 
         self.conv1 = nn.Conv2d(512, 256, 3, 1)
         self.conv2 = nn.Conv2d(256, 32, 3, 1)
-        self.fc = nn.Linear(32*3*3, n_class)
+        self.fc = nn.Linear(32 * 3 * 3, n_class)
 
     def forward(self, flow_buf):
         outputs = self.model(flow_buf)
         outputs = self.conv1(outputs)
         outputs = self.conv2(outputs)
-        outputs = outputs.view(-1, 32*3*3)
+        outputs = outputs.view(-1, 32 * 3 * 3)
         outputs = self.fc(outputs)
         return outputs
 
 
-
-
 if __name__ == '__main__':
-    print('*'*80)
-    flow = torch.randn(1, 20, 224,224)
+    print('*' * 80)
+    flow = torch.randn(1, 20, 224, 224)
 
     model = Model(7)
     outputs = model(flow)
     print(outputs.size())
-
-
-

@@ -3,14 +3,12 @@
 # vim:fenc=utf-8
 
 import os
+
+import cv2 as cv
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.optim as optim
-from torchvision import models
+
 from model.model import Model
-from torch.utils.data import DataLoader
-import cv2 as cv
 
 device = torch.device('cuda:0')
 
@@ -25,26 +23,30 @@ model = model
 resize_height = 280
 resize_width = 280
 crop_size = 224
+
+
 def load_frames(video_folder):
     # return 1 rgb and 20 optical flow
     rgb_buf = None
     for name in os.listdir(video_folder):
         if name.startswith('rgb'):
-            rgb_buf = cv.imread(os.path.join(video_folder,name)).astype(np.float32)
+            rgb_buf = cv.imread(os.path.join(video_folder, name)).astype(np.float32)
             rgb_buf = cv.resize(rgb_buf, (resize_height, resize_width))
             rgb_buf[..., 0] = rgb_buf[..., 0] - np.average(rgb_buf[..., 0])
             rgb_buf[..., 1] = rgb_buf[..., 1] - np.average(rgb_buf[..., 1])
             rgb_buf[..., 2] = rgb_buf[..., 2] - np.average(rgb_buf[..., 2])
             start_height = np.random.randint(0, rgb_buf.shape[0] - crop_size + 1)
             start_width = np.random.randint(0, rgb_buf.shape[1] - crop_size + 1)
-            rgb_buf = rgb_buf[start_height : start_height+crop_size,
-                    start_width : start_width+crop_size, :]
+            rgb_buf = rgb_buf[start_height: start_height + crop_size,
+                      start_width: start_width + crop_size, :]
             rgb_buf = rgb_buf.transpose(2, 0, 1)
     if rgb_buf is None:
         raise ValueError('not found any rgb images')
 
-    flowx_files = sorted([os.path.join(video_folder, name) for name in os.listdir(video_folder) if name.startswith('flowx')])
-    flowy_files = sorted([os.path.join(video_folder, name) for name in os.listdir(video_folder) if name.startswith('flowy')])
+    flowx_files = sorted(
+        [os.path.join(video_folder, name) for name in os.listdir(video_folder) if name.startswith('flowx')])
+    flowy_files = sorted(
+        [os.path.join(video_folder, name) for name in os.listdir(video_folder) if name.startswith('flowy')])
 
     # check flowx and flowy  image
     cur_flowx_num = len(flowx_files)
@@ -80,11 +82,12 @@ def load_frames(video_folder):
 
     start_height = np.random.randint(0, flow_buf.shape[0] - crop_size + 1)
     start_width = np.random.randint(0, flow_buf.shape[1] - crop_size + 1)
-    flow_buf = flow_buf[start_height : start_height+crop_size, start_width : start_width+crop_size, :]
+    flow_buf = flow_buf[start_height: start_height + crop_size, start_width: start_width + crop_size, :]
     flow_buf = flow_buf.transpose(2, 0, 1)
 
     flow_buf = flow_buf[np.newaxis, ...]
     return (rgb_buf, flow_buf)
+
 
 def predict(rgb_buf, flow_buf):
     corrects_so_far = 0
@@ -95,8 +98,9 @@ def predict(rgb_buf, flow_buf):
     pred_labels = torch.max(outputs, 1)[1]
     print('predicted labels ', pred_labels)
 
+
 if __name__ == '__main__':
-    print('*'*80)
+    print('*' * 80)
 
     # rgb_buf, flow_buf = load_frames('./986706308.mp4_2')
     # rgb_buf, flow_buf = load_frames('898450942.mp4_2')

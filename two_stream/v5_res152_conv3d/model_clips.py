@@ -3,15 +3,13 @@
 # vim:fenc=utf-8
 #
 
-import numpy as np
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torchvision import models
-from model.model import Model
-from dataset import VideoDataset
-from torch.utils.data import DataLoader
 import time
+
+import torch
+from torch.utils.data import DataLoader
+
+from dataset import VideoDataset
+from model.model import Model
 
 device = torch.device('cuda:1')
 
@@ -24,13 +22,14 @@ test_data = VideoDataset(
     split='test',
     multi_scale=False,
     use_flip=False
-    )
+)
 
 test_loader = DataLoader(test_data, batch_size=4, shuffle=True, num_workers=4)
 
 model = Model(7).to(device)
 model.load_state_dict(torch.load('./trained_model/two_stream_0.8678.pth')['state_dict'])
 print('load model success')
+
 
 def predict():
     corrects_so_far = 0
@@ -52,14 +51,14 @@ def predict():
             corrects_so_far += torch.sum(pred_labels == labels).item()
             count_so_far += rgb_buf.size(0)
             if (idx + 1) % 100 == 0:
-                print('[acc:{:.4f} {}/{}]'.format(corrects_so_far/count_so_far, corrects_so_far, count_so_far))
+                print('[acc:{:.4f} {}/{}]'.format(corrects_so_far / count_so_far, corrects_so_far, count_so_far))
 
-        print('[final acc:{:.4f} {}/{}]'.format(corrects_so_far/count_so_far,corrects_so_far, count_so_far))
+        print('[final acc:{:.4f} {}/{}]'.format(corrects_so_far / count_so_far, corrects_so_far, count_so_far))
         cost_time = time.time() - begin_time
         print(cost_time)
         print(cost_time / test_size)
 
 
 if __name__ == '__main__':
-    print('*'*80)
+    print('*' * 80)
     predict()

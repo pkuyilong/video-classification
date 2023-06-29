@@ -1,9 +1,10 @@
 import os
+
 import cv2 as cv
 import numpy as np
 import torch
-import numpy as np
-from torch.utils.data import Dataset,DataLoader
+from torch.utils.data import Dataset, DataLoader
+
 
 class VideoDataset(Dataset):
     def __init__(self, dataset_path, split_data, split, multi_scale=True, use_flip=True):
@@ -17,23 +18,23 @@ class VideoDataset(Dataset):
         self.split_data = split_data
         self.split = split
         self.multi_scale = multi_scale
-        self.use_flip=use_flip
+        self.use_flip = use_flip
 
         self.crop_size = 224
 
         print('init video_list')
         self.video_list = [video for cls in os.listdir(os.path.join(self.dataset_path, self.split))
-                for video in os.listdir(os.path.join(self.dataset_path, self.split, cls))]
+                           for video in os.listdir(os.path.join(self.dataset_path, self.split, cls))]
 
         print('init video2path')
-        self.video2path = {video : os.path.join(self.dataset_path, self.split, cls, video)
-            for cls in os.listdir(os.path.join(self.dataset_path, self.split))
-            for video in os.listdir(os.path.join(self.dataset_path, self.split, cls)) }
+        self.video2path = {video: os.path.join(self.dataset_path, self.split, cls, video)
+                           for cls in os.listdir(os.path.join(self.dataset_path, self.split))
+                           for video in os.listdir(os.path.join(self.dataset_path, self.split, cls))}
 
         print('init video2label')
-        self.video2label = {video : label \
-            for label, cls in enumerate(sorted(os.listdir(os.path.join(self.dataset_path, self.split))))
-            for video in os.listdir(os.path.join(self.dataset_path, self.split, cls)) }
+        self.video2label = {video: label \
+                            for label, cls in enumerate(sorted(os.listdir(os.path.join(self.dataset_path, self.split))))
+                            for video in os.listdir(os.path.join(self.dataset_path, self.split, cls))}
 
         np.random.shuffle(self.video_list)
 
@@ -60,7 +61,7 @@ class VideoDataset(Dataset):
 
         for name in os.listdir(video_folder):
             if name.startswith('rgb'):
-                rgb_buf = cv.imread(os.path.join(video_folder,name)).astype(np.float32)
+                rgb_buf = cv.imread(os.path.join(video_folder, name)).astype(np.float32)
                 width = rgb_buf.shape[1]
                 height = rgb_buf.shape[0]
 
@@ -103,7 +104,7 @@ class VideoDataset(Dataset):
     def horizon_flip(self, rgb_buf, flow_buf):
         rgb_buf = cv.flip(rgb_buf, 1)
         for idx in range(flow_buf.shape[2]):
-            flow_buf[:,:,idx] = cv.flip(flow_buf[:,:,idx], 1)
+            flow_buf[:, :, idx] = cv.flip(flow_buf[:, :, idx], 1)
         return (rgb_buf, flow_buf)
 
     def center_crop(self, rgb_buf, flow_buf):
@@ -112,8 +113,8 @@ class VideoDataset(Dataset):
         start_height = (rgb_buf.shape[0] - self.crop_size) // 2
         start_width = (rgb_buf.shape[1] - self.crop_size) // 2
 
-        rgb_buf = rgb_buf[start_height:start_height+self.crop_size, start_width:start_width+self.crop_size, :]
-        flow_buf = flow_buf[start_height:start_height+self.crop_size, start_width:start_width+self.crop_size, :]
+        rgb_buf = rgb_buf[start_height:start_height + self.crop_size, start_width:start_width + self.crop_size, :]
+        flow_buf = flow_buf[start_height:start_height + self.crop_size, start_width:start_width + self.crop_size, :]
         return (rgb_buf, flow_buf)
 
     def to_tensor(self, rgb_buf, flow_buf):
@@ -124,7 +125,7 @@ class VideoDataset(Dataset):
 
 
 if __name__ == "__main__":
-    print('#'*80)
+    print('#' * 80)
     dataset_path = '/home/datasets/mayilong/PycharmProjects/p55/two_stream/datasets/dataset3/data'
     split_data = '/home/datasets/mayilong/PycharmProjects/p55/two_stream/datasets/dataset3/split_data'
 
@@ -134,26 +135,25 @@ if __name__ == "__main__":
         split='train',
         multi_scale=True,
         use_flip=True
-        )
+    )
     val_data = VideoDataset(
         dataset_path=dataset_path,
         split_data=split_data,
         split='val',
         multi_scale=False,
         use_flip=False
-        )
+    )
     test_data = VideoDataset(
         dataset_path=dataset_path,
         split_data=split_data,
         split='test',
         multi_scale=False,
         use_flip=False
-        )
+    )
 
     train_loader = DataLoader(train_data, batch_size=16, shuffle=True, num_workers=4)
     val_loader = DataLoader(val_data, batch_size=16, shuffle=True, num_workers=4)
     test_loader = DataLoader(test_data, batch_size=16, shuffle=True, num_workers=4)
-
 
     for idx, (rgb_buf, flow_buf, label) in enumerate(train_loader):
         print('rgb_buf size is ', rgb_buf.size())

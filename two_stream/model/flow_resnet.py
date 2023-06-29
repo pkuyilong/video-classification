@@ -1,13 +1,11 @@
-import torch.nn as nn
-import torch
-import math
 import collections
-import numpy as np
+
+import torch
+import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
 
 __all__ = ['ResNet', 'flow_resnet18', 'flow_resnet34', 'flow_resnet50', 'flow_resnet50_aux', 'flow_resnet101',
            'flow_resnet152']
-
 
 model_urls = {
     'resnet18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',
@@ -163,12 +161,13 @@ class ResNet(nn.Module):
 
         return x
 
+
 def change_key_names(old_params, in_channels):
     new_params = collections.OrderedDict()
     layer_count = 0
     allKeyList = old_params.keys()
     for layer_key in allKeyList:
-        if layer_count >= len(allKeyList)-2:
+        if layer_count >= len(allKeyList) - 2:
             # exclude fc layers
             continue
         else:
@@ -178,7 +177,7 @@ def change_key_names(old_params, in_channels):
                 rgb_weight_mean = torch.mean(rgb_weight, dim=1)
                 # TODO: ugly fix here, why torch.mean() turn tensor to Variable
                 # print(type(rgb_weight_mean))
-                flow_weight = rgb_weight_mean.unsqueeze(1).repeat(1,in_channels,1,1)
+                flow_weight = rgb_weight_mean.unsqueeze(1).repeat(1, in_channels, 1, 1)
                 new_params[layer_key] = flow_weight
                 layer_count += 1
                 # print(layer_key, new_params[layer_key].size(), type(new_params[layer_key]))
@@ -186,8 +185,9 @@ def change_key_names(old_params, in_channels):
                 new_params[layer_key] = old_params[layer_key]
                 layer_count += 1
                 # print(layer_key, new_params[layer_key].size(), type(new_params[layer_key]))
-    
+
     return new_params
+
 
 def flow_resnet18(pretrained=False, **kwargs):
     """Constructs a ResNet-18 model.
@@ -206,11 +206,12 @@ def flow_resnet18(pretrained=False, **kwargs):
         # 1. filter out unnecessary keys
         new_pretrained_dict = {k: v for k, v in new_pretrained_dict.items() if k in model_dict}
         # 2. overwrite entries in the existing state dict
-        model_dict.update(new_pretrained_dict) 
+        model_dict.update(new_pretrained_dict)
         # 3. load the new state dict
         model.load_state_dict(model_dict)
 
     return model
+
 
 def flow_resnet34(pretrained=False, **kwargs):
     """Constructs a ResNet-34 model.
@@ -222,6 +223,7 @@ def flow_resnet34(pretrained=False, **kwargs):
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet34']))
     return model
+
 
 def flow_resnet50(pretrained=False, **kwargs):
     """Constructs a ResNet-50 model.
@@ -239,11 +241,12 @@ def flow_resnet50(pretrained=False, **kwargs):
         # 1. filter out unnecessary keys
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
         # 2. overwrite entries in the existing state dict
-        model_dict.update(pretrained_dict) 
+        model_dict.update(pretrained_dict)
         # 3. load the new state dict
         model.load_state_dict(model_dict)
 
     return model
+
 
 def flow_resnet50_aux(pretrained=False, **kwargs):
     """Constructs a ResNet-50 model.
@@ -263,10 +266,10 @@ def flow_resnet50_aux(pretrained=False, **kwargs):
         # 1. filter out unnecessary keys
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
         # 2. overwrite entries in the existing state dict
-        model_dict.update(pretrained_dict) 
+        model_dict.update(pretrained_dict)
         # print(model_dict)
-        fc_new_weight = model_dict["fc_aux.weight"].numpy() 
-        fc_new_bias = model_dict["fc_aux.bias"].numpy() 
+        fc_new_weight = model_dict["fc_aux.weight"].numpy()
+        fc_new_bias = model_dict["fc_aux.bias"].numpy()
 
         fc_new_weight[:1000, :] = fc_origin_weight
         fc_new_bias[:1000] = fc_origin_bias
@@ -279,6 +282,7 @@ def flow_resnet50_aux(pretrained=False, **kwargs):
 
     return model
 
+
 def flow_resnet101(pretrained=False, **kwargs):
     """Constructs a ResNet-101 model.
 
@@ -290,13 +294,14 @@ def flow_resnet101(pretrained=False, **kwargs):
         model.load_state_dict(model_zoo.load_url(model_urls['resnet101']))
     return model
 
+
 def flow_resnet152(pretrained=False, **kwargs):
     """Constructs a ResNet-152 model.
 
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet(Bottleneck, [3, 8, 36, 3], num_classes=101,**kwargs)
+    model = ResNet(Bottleneck, [3, 8, 36, 3], num_classes=101, **kwargs)
     if pretrained:
         in_channels = 20
         # model.load_state_dict(model_zoo.load_url(model_urls['resnet152']))
@@ -307,11 +312,12 @@ def flow_resnet152(pretrained=False, **kwargs):
         # 1. filter out unnecessary keys
         new_pretrained_dict = {k: v for k, v in new_pretrained_dict.items() if k in model_dict}
         # 2. overwrite entries in the existing state dict
-        model_dict.update(new_pretrained_dict) 
+        model_dict.update(new_pretrained_dict)
         # 3. load the new state dict
         model.load_state_dict(model_dict)
 
     return model
+
 
 if __name__ == '__main__':
     res152 = flow_resnet152()

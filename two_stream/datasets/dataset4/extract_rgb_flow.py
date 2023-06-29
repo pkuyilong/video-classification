@@ -4,13 +4,11 @@
 #
 
 import os
+import pickle
+
 import cv2 as cv
 import numpy as np
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torchvision import models
-import pickle
+
 
 class Extractor():
     def __init__(self, cls_root, save_dir, video2path):
@@ -105,7 +103,7 @@ class Extractor():
 
     def handle_rgb_buf(self, rgb_buf, save_dir):
         # usage rgb_buf (list contain 33 rgb frame)  save_dir (path/to/video_name)
-        if len(rgb_buf)  == 0 or len(rgb_buf) != 33:
+        if len(rgb_buf) == 0 or len(rgb_buf) != 33:
             raise RuntimeError('rgb_buf is empty')
         rgb_file = rgb_buf[5]
         cv.imwrite(os.path.join(save_dir, 'rgb.jpeg'), rgb_file)
@@ -116,15 +114,17 @@ class Extractor():
             flow_x = flow[..., 0]
             flow_y = flow[..., 1]
 
-            cv.imwrite(os.path.join(save_dir, 'flowx_{:02d}.jpeg'.format(i-1)), flow_x)
-            cv.imwrite(os.path.join(save_dir, 'flowy_{:02d}.jpeg'.format(i-1)), flow_y)
+            cv.imwrite(os.path.join(save_dir, 'flowx_{:02d}.jpeg'.format(i - 1)), flow_x)
+            cv.imwrite(os.path.join(save_dir, 'flowy_{:02d}.jpeg'.format(i - 1)), flow_y)
             prev_gray = cur_gray
             cur_gray = None
+
 
 if __name__ == '__main__':
     # rgb_flow_gen('928296508.mp4', '/home/datasets/mayilong/PycharmProjects/p55/two_stream/v1/data/video_tmp')
     cls_root = '/home/datasets/mayilong/PycharmProjects/p55/two_stream/datasets/dataset4/split_data'
     save_dir = '/home/datasets/mayilong/PycharmProjects/p55/two_stream/datasets/dataset4/data'
-    video2path = pickle.load(open('/home/datasets/mayilong/PycharmProjects/p55/resource/train_val_video2path.pkl', 'rb'))
+    video2path = pickle.load(
+        open('/home/datasets/mayilong/PycharmProjects/p55/resource/train_val_video2path.pkl', 'rb'))
     extractor = Extractor(cls_root, save_dir, video2path)
     extractor.run()

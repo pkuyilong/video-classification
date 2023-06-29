@@ -2,13 +2,14 @@
 # -*- coding: utf-8 -*-
 # vim:fenc=utf-8
 import sys
+
 sys.path.append('../')
 import os
 import numpy as np
 from utils.store_utils import parse_pkl
 import cv2 as cv
 import argparse
-import shutil
+
 
 def check_frames(video, low, high):
     cap = cv.VideoCapture(video)
@@ -59,9 +60,9 @@ def split_train_val_test(cls_txt, save_dir, video2path, low, high, label, n_vide
     for idx, item in enumerate(dataset):
         if count < 300:
             if check_frames(video2path[item], low, high):
-                if count < int(n_video*train_ratio):
+                if count < int(n_video * train_ratio):
                     train_handle.write(item + ' ' + str(label) + '\n')
-                elif count < int(n_video*val_ratio):
+                elif count < int(n_video * val_ratio):
                     val_handle.write(item + ' ' + str(label) + '\n')
                 else:
                     test_handle.write(item + ' ' + str(label) + '\n')
@@ -70,6 +71,7 @@ def split_train_val_test(cls_txt, save_dir, video2path, low, high, label, n_vide
             break
     if count < 300:
         print('{} can not find enough sample'.format(cls))
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -82,5 +84,4 @@ if __name__ == '__main__':
     labels = [0, 1, 2, 3, 4, 5, 6]
 
     for cls, label in zip(classes, labels):
-        split_train_val_test(os.path.join(args.txt_dir,cls + '.txt'), args.save_dir, args.video2path, 180, 451, label)
-
+        split_train_val_test(os.path.join(args.txt_dir, cls + '.txt'), args.save_dir, args.video2path, 180, 451, label)

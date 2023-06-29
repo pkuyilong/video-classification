@@ -1,9 +1,10 @@
 import os
+
 import cv2 as cv
 import numpy as np
 import torch
-import numpy as np
 from torch.utils.data import Dataset
+
 
 class VideoDataset(Dataset):
 
@@ -30,15 +31,18 @@ class VideoDataset(Dataset):
         self.crop_size = 224
 
         print('init video_list')
-        self.video_list = [video for cls in os.listdir(os.path.join(self.root_dir, split)) for video in os.listdir(os.path.join(self.root_dir, split, cls))]
+        self.video_list = [video for cls in os.listdir(os.path.join(self.root_dir, split)) for video in
+                           os.listdir(os.path.join(self.root_dir, split, cls))]
 
         print('init video2path')
-        self.video2path = {video : os.path.join(self.root_dir, split, cls, video) \
-            for cls in os.listdir(os.path.join(self.root_dir, split)) for video in os.listdir(os.path.join(self.root_dir, split, cls)) }
+        self.video2path = {video: os.path.join(self.root_dir, split, cls, video) \
+                           for cls in os.listdir(os.path.join(self.root_dir, split)) for video in
+                           os.listdir(os.path.join(self.root_dir, split, cls))}
 
         print('init video2label')
-        self.video2label = {video : label \
-            for label, cls in enumerate(os.listdir(os.path.join(self.root_dir, split))) for video in os.listdir(os.path.join(self.root_dir, split, cls)) }
+        self.video2label = {video: label \
+                            for label, cls in enumerate(os.listdir(os.path.join(self.root_dir, split))) for video in
+                            os.listdir(os.path.join(self.root_dir, split, cls))}
 
         np.random.shuffle(self.video_list)
 
@@ -62,16 +66,16 @@ class VideoDataset(Dataset):
         i = 0
         try:
             for idx, frame in enumerate(frames):
-                    frame = cv.imread(frame)
-                    frame = cv.resize(frame, (self.resize_height, self.resize_width))
-                    frame = frame.transpose(2,0,1).astype(np.float32)
-                    buf[i] = frame
-                    i += 1
+                frame = cv.imread(frame)
+                frame = cv.resize(frame, (self.resize_height, self.resize_width))
+                frame = frame.transpose(2, 0, 1).astype(np.float32)
+                buf[i] = frame
+                i += 1
 
             if buf.shape[0] == 0:
                 raise RuntimeError('buf is empty')
             if buf.shape[0] < 16:
-                need_to_fill = 16-buf.size(0)
+                need_to_fill = 16 - buf.size(0)
                 while need_to_fill > 0:
                     buf.append(buf[-1])
                     need_to_fill -= 1
@@ -88,7 +92,6 @@ class VideoDataset(Dataset):
 
         return buffer
 
-
     def _crop(self, buf, crop_size):
         height_index = np.random.randint(buf.shape[2] - crop_size)
         width_index = np.random.randint(buf.shape[3] - crop_size)
@@ -104,8 +107,9 @@ if __name__ == "__main__":
         n_frame=16)
 
     from torch.utils.data import DataLoader
+
     train_loader = DataLoader(train_data, batch_size=8, shuffle=True, num_workers=1)
-    print('train_lodaer',len(train_loader))
+    print('train_lodaer', len(train_loader))
 
     for idx, (buf, label) in enumerate(train_loader):
         if idx == 3:

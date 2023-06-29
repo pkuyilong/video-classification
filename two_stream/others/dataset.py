@@ -1,8 +1,8 @@
 import os
+
 import cv2 as cv
 import numpy as np
 import torch
-import numpy as np
 from torch.utils.data import Dataset
 
 
@@ -27,20 +27,19 @@ class VideoDataset(Dataset):
         self.resize_width = 280
         self.crop_size = 224
 
-
         print('init video_list')
         self.video_list = [video for cls in os.listdir(os.path.join(self.root_dir, self.split))
-                for video in os.listdir(os.path.join(self.root_dir, self.split, cls))]
+                           for video in os.listdir(os.path.join(self.root_dir, self.split, cls))]
 
         print('init video2path')
-        self.video2path = {video : os.path.join(self.root_dir, self.split, cls, video)
-            for cls in os.listdir(os.path.join(self.root_dir, self.split))
-            for video in os.listdir(os.path.join(self.root_dir, self.split, cls)) }
+        self.video2path = {video: os.path.join(self.root_dir, self.split, cls, video)
+                           for cls in os.listdir(os.path.join(self.root_dir, self.split))
+                           for video in os.listdir(os.path.join(self.root_dir, self.split, cls))}
 
         print('init video2label')
-        self.video2label = {video : label \
-            for label, cls in enumerate(os.listdir(os.path.join(self.root_dir, split)))
-            for video in os.listdir(os.path.join(self.root_dir, self.split, cls)) }
+        self.video2label = {video: label \
+                            for label, cls in enumerate(os.listdir(os.path.join(self.root_dir, split)))
+                            for video in os.listdir(os.path.join(self.root_dir, self.split, cls))}
 
         np.random.shuffle(self.video_list)
 
@@ -58,7 +57,7 @@ class VideoDataset(Dataset):
             buf = None
             for name in os.listdir(video_folder):
                 if name.startswith('rgb'):
-                    buf = cv.imread(os.path.join(video_folder,name)).astype(np.float32)
+                    buf = cv.imread(os.path.join(video_folder, name)).astype(np.float32)
                     buf = cv.resize(buf, (self.resize_height, self.resize_width))
                     buf[..., 0] = buf[..., 0] - np.average(buf[..., 0])
                     buf[..., 1] = buf[..., 1] - np.average(buf[..., 1]
@@ -66,14 +65,16 @@ class VideoDataset(Dataset):
 
                     start_height = np.random.randint(0, buf.shape[0] - self.crop_size + 1)
                     start_width = np.random.randint(0, buf.shape[1] - self.crop_size + 1)
-                    buf = buf[start_height : start_height+self.crop_size,
-                            start_width : start_width+self.crop_size, :]
+                    buf = buf[start_height: start_height + self.crop_size,
+                          start_width: start_width + self.crop_size, :]
                     buf = buf.transpose(2, 0, 1)
             return buf
 
         elif ty == 'flow':
-            flowx_files = sorted([os.path.join(video_folder, name) for name in os.listdir(video_folder) if name.startswith('flowx')])
-            flowy_files = sorted([os.path.join(video_folder, name) for name in os.listdir(video_folder) if name.startswith('flowy')])
+            flowx_files = sorted(
+                [os.path.join(video_folder, name) for name in os.listdir(video_folder) if name.startswith('flowx')])
+            flowy_files = sorted(
+                [os.path.join(video_folder, name) for name in os.listdir(video_folder) if name.startswith('flowy')])
 
             buf = np.empty((self.resize_height, self.resize_width, n_frame), np.dtype('float32'))
             for idx, (flowx, flowy) in enumerate(zip(flowx_files, flowy_files)):
@@ -84,12 +85,12 @@ class VideoDataset(Dataset):
                 flow_x = np.max(flow_x, axis=2)
                 flow_y = np.max(flow_y, axis=2)
 
-                buf[:, :, 2*idx] = flow_x
-                buf[:, :, 2*idx+1] = flow_y
+                buf[:, :, 2 * idx] = flow_x
+                buf[:, :, 2 * idx + 1] = flow_y
 
             start_height = np.random.randint(0, buf.shape[0] - self.crop_size + 1)
             start_width = np.random.randint(0, buf.shape[1] - self.crop_size + 1)
-            buf = buf[start_height : start_height+self.crop_size, start_width : start_width+self.crop_size, :]
+            buf = buf[start_height: start_height + self.crop_size, start_width: start_width + self.crop_size, :]
             buf = buf.transpose(2, 0, 1)
             return buf
         else:
@@ -116,8 +117,9 @@ class VideoDataset(Dataset):
     #     buffer = buffer[:, height_index:height_index + crop_size, width_index:width_index + crop_size, :]
     #     return buffer
 
+
 if __name__ == "__main__":
-    print('#'*80)
+    print('#' * 80)
     train_data = VideoDataset(
         root_dir='/home/datasets/mayilong/PycharmProjects/p55/data/rgb_flow_300',
         split_data='/home/datasets/mayilong/PycharmProjects/p55/data/split_data',
@@ -126,8 +128,9 @@ if __name__ == "__main__":
         n_frame=20)
 
     from torch.utils.data import DataLoader
+
     train_loader = DataLoader(train_data, batch_size=8, shuffle=True, num_workers=4)
-    print('train_lodaer',len(train_loader))
+    print('train_lodaer', len(train_loader))
 
     for idx, (buf, label) in enumerate(train_loader):
         print('buf size is ', buf.size())

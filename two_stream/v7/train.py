@@ -3,12 +3,12 @@
 # vim:fenc=utf-8
 
 import os
+
 import torch
-import numpy as np
-from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.optim as optim
-from torchvision import models
+from torch.utils.data import DataLoader
+
 from dataset import VideoDataset
 from model.model import Model
 
@@ -23,26 +23,25 @@ train_data = VideoDataset(
     split='train',
     multi_scale=True,
     use_flip=True
-    )
+)
 val_data = VideoDataset(
     dataset_path=dataset_path,
     split_data=split_data,
     split='val',
     multi_scale=False,
     use_flip=False
-    )
+)
 test_data = VideoDataset(
     dataset_path=dataset_path,
     split_data=split_data,
     split='test',
     multi_scale=False,
     use_flip=False
-    )
+)
 
 train_loader = DataLoader(train_data, batch_size=16, shuffle=True, num_workers=4)
 val_loader = DataLoader(val_data, batch_size=16, shuffle=True, num_workers=4)
 test_loader = DataLoader(test_data, batch_size=16, shuffle=True, num_workers=4)
-
 
 model = Model(7)
 model = model.to(device)
@@ -52,8 +51,10 @@ lr = 0.0001
 interval = 50
 
 criterion = nn.CrossEntropyLoss(reduction='sum')
-optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=0.0005 )
+optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=0.0005)
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.2, patience=2)
+
+
 def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, model_dir):
     print('Start trianning')
     record = open('./{}.txt'.format(os.path.basename(__file__).split('.')[0]), 'w+')
@@ -80,18 +81,23 @@ def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, 
             corrects_so_far += torch.sum(pred_labels == labels).item()
             count_so_far += rgb_buf.size(0)
 
-            if (idx+1) %  interval == 0:
-                print('[acc-{:.4f}, loss-{:.4f} [{}/{}]'.format(corrects_so_far/count_so_far, loss_so_far/count_so_far, corrects_so_far, count_so_far))
+            if (idx + 1) % interval == 0:
+                print('[acc-{:.4f}, loss-{:.4f} [{}/{}]'.format(corrects_so_far / count_so_far,
+                                                                loss_so_far / count_so_far, corrects_so_far,
+                                                                count_so_far))
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-        print('[train-{}/{}] [acc-{:.4f}, loss-{:.4f}] [{}/{}]\n'.format(epoch, n_epoch, corrects_so_far/count_so_far, loss_so_far/count_so_far, corrects_so_far, count_so_far))
+        print('[train-{}/{}] [acc-{:.4f}, loss-{:.4f}] [{}/{}]\n'.format(epoch, n_epoch, corrects_so_far / count_so_far,
+                                                                         loss_so_far / count_so_far, corrects_so_far,
+                                                                         count_so_far))
 
-        with open('./{}.txt'.format(os.path.basename(__file__).split('.')[0]),  'a+') as record:
+        with open('./{}.txt'.format(os.path.basename(__file__).split('.')[0]), 'a+') as record:
             record.write('[train-{}/{}] [acc-{:.4f}, loss-{:.4f}] [{}/{}]\n'.
-                    format(epoch, n_epoch, corrects_so_far/count_so_far, loss_so_far/count_so_far, corrects_so_far, count_so_far))
+                         format(epoch, n_epoch, corrects_so_far / count_so_far, loss_so_far / count_so_far,
+                                corrects_so_far, count_so_far))
 
         model.eval()
         with torch.no_grad():
@@ -115,32 +121,37 @@ def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, 
 
             # may modify learning rate
             scheduler.step(loss)
-            acc = corrects_so_far/count_so_far
+            acc = corrects_so_far / count_so_far
             print('[val-{}/{}] [acc-{:.4f}, loss-{:.4f}] [{}/{}]\n'.format(
-                epoch, n_epoch, acc, loss_so_far/count_so_far, corrects_so_far, count_so_far))
+                epoch, n_epoch, acc, loss_so_far / count_so_far, corrects_so_far, count_so_far))
 
-            with open(os.path.join(os.getcwd(), '{}.txt'.format(os.path.basename(__file__).split('.')[0])), 'a+') as record:
+            with open(os.path.join(os.getcwd(), '{}.txt'.format(os.path.basename(__file__).split('.')[0])),
+                      'a+') as record:
                 record.write('[val-{}/{}] [acc-{:.4f}, loss-{:.4f}] [{}/{}]\n'.
-                        format(epoch, n_epoch, corrects_so_far/count_so_far, loss_so_far/count_so_far, corrects_so_far, count_so_far))
+                             format(epoch, n_epoch, corrects_so_far / count_so_far, loss_so_far / count_so_far,
+                                    corrects_so_far, count_so_far))
 
-            if corrects_so_far/count_so_far >= 0.84:
-                if corrects_so_far/count_so_far > best_acc:
-                    best_acc = corrects_so_far/count_so_far
+            if corrects_so_far / count_so_far >= 0.84:
+                if corrects_so_far / count_so_far > best_acc:
+                    best_acc = corrects_so_far / count_so_far
                     try:
                         if not os.path.exists(model_dir):
                             os.makedirs(model_dir)
 
-                        param_dict = {'epoch':epoch,
-                                'state_dict':model.state_dict(),
-                                'best_acc':corrects_so_far/count_so_far,
-                                'optimizer_param':optimizer.state_dict()}
+                        param_dict = {'epoch': epoch,
+                                      'state_dict': model.state_dict(),
+                                      'best_acc': corrects_so_far / count_so_far,
+                                      'optimizer_param': optimizer.state_dict()}
 
-                        torch.save(param_dict, os.path.join(model_dir,'two_stream_{:.4f}.pth'.format(corrects_so_far/count_so_far)))
+                        torch.save(param_dict, os.path.join(model_dir, 'two_stream_{:.4f}.pth'.format(
+                            corrects_so_far / count_so_far)))
 
                     except Exception as e:
                         print(str(e))
-                        with open(os.path.join(os.getcwd(), '{}.txt'.format(os.path.basename(__file__).split('.')[0])), 'a+') as record:
+                        with open(os.path.join(os.getcwd(), '{}.txt'.format(os.path.basename(__file__).split('.')[0])),
+                                  'a+') as record:
                             record.write('[ERROR] ' + str(e) + '\n')
+
 
 if __name__ == '__main__':
     model_dir = './trained_model'

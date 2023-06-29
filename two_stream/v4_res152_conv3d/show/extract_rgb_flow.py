@@ -4,17 +4,15 @@
 #
 
 import os
-import cv2 as cv
-import numpy as np
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torchvision import models
 import pickle
 
-def handle_rgb_buf( rgb_buf, save_dir):
+import cv2 as cv
+import numpy as np
+
+
+def handle_rgb_buf(rgb_buf, save_dir):
     # usage rgb_buf (list contain 11 rgb frame)  save_dir (path/to/video_name)
-    if len(rgb_buf)  == 0 or len(rgb_buf) != 11:
+    if len(rgb_buf) == 0 or len(rgb_buf) != 11:
         raise RuntimeError('rgb_buf is empty')
     rgb_file = rgb_buf[5]
     cv.imwrite(os.path.join(save_dir, 'rgb.jpeg'), rgb_file)
@@ -25,10 +23,11 @@ def handle_rgb_buf( rgb_buf, save_dir):
         flow_x = flow[..., 0]
         flow_y = flow[..., 1]
 
-        cv.imwrite(os.path.join(save_dir, 'flowx_{:02d}.jpeg'.format(i-1)), flow_x)
-        cv.imwrite(os.path.join(save_dir, 'flowy_{:02d}.jpeg'.format(i-1)), flow_y)
+        cv.imwrite(os.path.join(save_dir, 'flowx_{:02d}.jpeg'.format(i - 1)), flow_x)
+        cv.imwrite(os.path.join(save_dir, 'flowy_{:02d}.jpeg'.format(i - 1)), flow_y)
         prev_gray = cur_gray
         cur_gray = None
+
 
 def rgb_flow_gen(video, video2path, save_dir):
     # usage :
@@ -83,14 +82,16 @@ def rgb_flow_gen(video, video2path, save_dir):
                     cap.release()
                     break
 
+
 if __name__ == '__main__':
-    video2path = pickle.load(open('/home/datasets/mayilong/PycharmProjects/p55/resource/train_val_video2path.pkl', 'rb'))
+    video2path = pickle.load(
+        open('/home/datasets/mayilong/PycharmProjects/p55/resource/train_val_video2path.pkl', 'rb'))
     # video_name = '976443169.mp4'
     # video_name = '956328232.mp4'
     # video_name = '944844406.mp4'
     # video_name = '986706308.mp4' #  female
     # video_name = '898450942.mp4'
-    video_name = '946235928.mp4'   # play_related
+    video_name = '946235928.mp4'  # play_related
     video2path[video_name]
     print(video2path[video_name])
 

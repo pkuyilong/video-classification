@@ -1,10 +1,12 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 # vim:fenc=utf-8
-import cv2 as cv
-import pickle
-import os
 import argparse
+import os
+import pickle
+
+import cv2 as cv
+
 
 def extract_rgb(video, save_dir, n_frame):
     # split image every 16 frames
@@ -37,9 +39,11 @@ def extract_rgb(video, save_dir, n_frame):
                 buf.append(rgb)
 
                 if len(buf) == n_frame:
-                    os.mkdir(os.path.join(save_dir, folder+'_'+str(suffix)))
+                    os.mkdir(os.path.join(save_dir, folder + '_' + str(suffix)))
                     for num, rgb in enumerate(buf):
-                        cv.imwrite(os.path.join(save_dir, folder+'_'+str(suffix), '{}_{:03d}.jpeg'.format(folder, num)), rgb)
+                        cv.imwrite(
+                            os.path.join(save_dir, folder + '_' + str(suffix), '{}_{:03d}.jpeg'.format(folder, num)),
+                            rgb)
 
                     suffix += 1
                     buf.clear()
@@ -52,6 +56,7 @@ def extract_rgb(video, save_dir, n_frame):
         print(e)
     finally:
         cap.release()
+
 
 def process(video2path, split, save_root, n_frame, err_file):
     """
@@ -88,10 +93,10 @@ def process(video2path, split, save_root, n_frame, err_file):
 
                     # video label need to split
                     video = video.strip().split(' ')[0]
-                    print('split ', split, 'cls', txt_file.split('.')[0],'idx: ', idx)
+                    print('split ', split, 'cls', txt_file.split('.')[0], 'idx: ', idx)
 
                     if video not in v2p.keys():
-                        err_handle.write(video +' not found ' + '\n')
+                        err_handle.write(video + ' not found ' + '\n')
                         raise RuntimeError('not find video ', video)
 
                     extract_rgb(v2p[video], os.path.join(save_root, split, cls), n_frame)
@@ -101,6 +106,7 @@ def process(video2path, split, save_root, n_frame, err_file):
         err_handle.write(str(e) + '\n')
     finally:
         err_handle.close()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -119,7 +125,6 @@ if __name__ == '__main__':
     save_root = args.save_root
     err_file = args.err_file
     n_frame = args.n_frame
-
 
     print('[*] processing train split now')
     process(video2path, 'train', save_root, n_frame, err_file)

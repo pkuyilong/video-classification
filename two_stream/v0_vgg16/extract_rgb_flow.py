@@ -2,20 +2,18 @@
 # -*- coding: utf-8 -*-
 # vim:fenc=utf-8
 import os
-import numpy as np
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torchvision import models
-import cv2 as cv
 import pickle
+
+import cv2 as cv
+import numpy as np
 
 video_data_path = '/home/datasets/mayilong/PycharmProjects/p55/data/split_data'
 store_path = '/home/datasets/mayilong/PycharmProjects/p55/data/rgb_flow_300'
 
+
 def extract_videos(video_data_path):
     video2path = pickle.load(
-            open('/home/datasets/mayilong/PycharmProjects/p55/resource/train_val_video2path.pkl', 'rb'))
+        open('/home/datasets/mayilong/PycharmProjects/p55/resource/train_val_video2path.pkl', 'rb'))
     for split in os.listdir(video_data_path):
 
         for txt_file in os.listdir(os.path.join(video_data_path, split)):
@@ -32,6 +30,7 @@ def extract_videos(video_data_path):
                     extract_rgb_flow(video2path[vdo_name], os.path.join(os.path.join(store_path, split, cls)))
                 except Exception as e:
                     print(e)
+
 
 def extract_rgb_flow(vdo_path, store_path):
     vdo_name = os.path.basename(vdo_path).split('.')[0]
@@ -84,11 +83,12 @@ def extract_rgb_flow(vdo_path, store_path):
     except Exception as e:
         print(e)
         with open('./extract_err.txt', 'w+') as f:
-            f.write('video_name : {}\n'.format(vdo_name)) 
+            f.write('video_name : {}\n'.format(vdo_name))
             f.write('err : {}\n'.format(str(e)))
     finally:
         cap.release()
 
+
 if __name__ == '__main__':
-    print('*'*80)
+    print('*' * 80)
     extract_videos(video_data_path)

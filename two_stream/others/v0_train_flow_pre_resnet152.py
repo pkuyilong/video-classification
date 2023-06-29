@@ -4,10 +4,10 @@
 #
 
 import sys
+
 sys.path.append('./model')
 import os
 import torch
-import numpy as np
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.optim as optim
@@ -16,7 +16,6 @@ from dataset import VideoDataset
 from model.flow_resnet import *
 
 device = torch.device('cuda:1')
-
 
 # train_data = VideoDataset(
 #     root_dir='/home/datasets/mayilong/PycharmProjects/p55/data/rgb',
@@ -52,6 +51,7 @@ n_epoch = 150
 lr = 0.0001
 interval = 50
 
+
 class RGBModel2(nn.Module):
     def __init__(self, n_class):
         super().__init__()
@@ -81,8 +81,8 @@ class RGBModel2(nn.Module):
             nn.MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False))
 
         self.classfiler = nn.Sequential(
-                nn.Linear(25088, 1024),
-                nn.Linear(1024,7))
+            nn.Linear(25088, 1024),
+            nn.Linear(1024, 7))
 
         for name, m in self.features.named_modules():
             if isinstance(m, nn.Conv2d):
@@ -101,6 +101,7 @@ class RGBModel2(nn.Module):
         output = output.view(buf.size(0), -1)
         output = self.classfiler(output)
         return output
+
 
 class RGBModel(nn.Module):
     def __init__(self, n_class):
@@ -127,6 +128,7 @@ class RGBModel(nn.Module):
         output = self.model(buf)
         return output
 
+
 class FlowModel(nn.Module):
     def __init__(self, n_class):
         super().__init__()
@@ -137,7 +139,7 @@ class FlowModel(nn.Module):
         old_param = self.model.features[0].weight.data
         old_param = torch.mean(old_param, dim=1, keepdim=True)
         new_param = old_param.repeat(1, 20, 1, 1)
-        self.model.features[0] = nn.Conv2d(20, 64, 3, 1,1)
+        self.model.features[0] = nn.Conv2d(20, 64, 3, 1, 1)
         self.model.features[0].weight.data = new_param
 
         # self.model.load_state_dict(torch.load('./pretrained_model/ucf101_s1_flow_resnet152.pth.tar')['state_dict'])
@@ -154,19 +156,22 @@ class FlowModel(nn.Module):
         output = self.fc(output)
         return output
 
-#model = RGBModel(n_class=7)
-#model = model.to(device)
+
+# model = RGBModel(n_class=7)
+# model = model.to(device)
 model = FlowModel(n_class=7)
-model =  model.to(device)
+model = model.to(device)
 
 criterion = nn.CrossEntropyLoss()
 
-optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=lr, momentum=0.9, weight_decay=0.0005 )
+optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=lr, momentum=0.9, weight_decay=0.0005)
 # optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=0.0005 )
 # optimizer = optim.SGD(filter(lambda m: m.requires_grad, model.parameters()), lr=lr, momentum=0.9, weight_decay=0.0005)
 # optimizer = optim.Adam(model.parameters(), lr=lr)
 # optimizer = optim.SGD(model.parameters(), lr=lr)
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.2, patience=5)
+
+
 # scheduler = optim.lr_scheduler.StepLR(optimizer, 10, 0.1, -1)
 
 # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=25, gamma=0.5, last_epoch=-1)
@@ -181,7 +186,6 @@ def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, 
         train_loss = 0
 
         for idx, (buf, labels) in enumerate(train_loader):
-
             buf = buf.to(device)
             labels = labels.to(device)
             outputs = model(buf)
@@ -213,9 +217,9 @@ def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, 
         # print('[*] RGB [train-e-{}/{}] [train_acc-{:.4f}, train_loss-{:.4f}][{}/{}]'.
         #         format(epoch, n_epoch, train_acc, train_loss, train_corrects, train_total))
 
-        with open('./{}.txt'.format(os.path.basename(__file__).split('.')[0]),  'a+') as record:
+        with open('./{}.txt'.format(os.path.basename(__file__).split('.')[0]), 'a+') as record:
             record.write('[train-e-{}/{}] [train_acc-{:.4f} train_loss-{:.4f}] [{}/{}] \n'.
-                    format(epoch, n_epoch, train_acc, train_loss, train_corrects, train_total))
+                         format(epoch, n_epoch, train_acc, train_loss, train_corrects, train_total))
 
         model.eval()
         with torch.no_grad():
@@ -236,14 +240,13 @@ def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, 
                 val_corrects += torch.sum(pred_labels == labels).item()
 
             # may modify learning rate
-            val_loss  = val_loss / val_total
+            val_loss = val_loss / val_total
             scheduler.step(val_loss)
             val_acc = val_corrects / val_total
 
-
-            with open('./{}.txt'.format(os.path.basename(__file__).split('.')[0]),  'a+') as record:
+            with open('./{}.txt'.format(os.path.basename(__file__).split('.')[0]), 'a+') as record:
                 record.write('[val-e-{}/{}] [val_acc-{:.4f} val_loss-{:.4f}] [{}/{}]\n'.
-                        format(epoch, n_epoch, val_acc, val_loss, val_corrects, val_total))
+                             format(epoch, n_epoch, val_acc, val_loss, val_corrects, val_total))
             # print('[val-e-{}/{}] [{}/{}]'.format(epoch, n_epoch, val_corrects, val_total))
             # print('val_acc {:.4f}, val_loss {:.4f}'.format(val_acc, val_loss))
 
@@ -252,11 +255,14 @@ def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, 
                     if not os.path.exists(model_dir):
                         os.makedirs(model_dir)
 
-                    torch.save(model.state_dict(), os.path.join(model_dir,'flow_pre_resnet152_{:.4f}.pth'.format(val_acc)))
+                    torch.save(model.state_dict(),
+                               os.path.join(model_dir, 'flow_pre_resnet152_{:.4f}.pth'.format(val_acc)))
                 except Exception as e:
                     print(str(e))
-                    with open('./{}.txt'.format(os.path.basename(__file__).split('.')[0]),  'a+') as record:
+                    with open('./{}.txt'.format(os.path.basename(__file__).split('.')[0]), 'a+') as record:
                         record.write('[ERROR] ' + str(e) + '\n')
 
+
 if __name__ == '__main__':
-    train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, '/home/datasets/mayilong/PycharmProjects/p55/two_stream/trained_model/flow')
+    train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader,
+                '/home/datasets/mayilong/PycharmProjects/p55/two_stream/trained_model/flow')

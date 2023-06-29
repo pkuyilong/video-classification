@@ -3,11 +3,11 @@
 # vim:fenc=utf-8
 
 import os
+
 import torch
-import torch.optim as optim
-import numpy as np
-from torch.utils.data import DataLoader
 import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import DataLoader
 from torchvision import models
 
 from v1_several_dataset import VideoDataset
@@ -32,6 +32,7 @@ n_epoch = 100
 lr = 0.0001
 interval = 500
 
+
 class RGBModel(nn.Module):
     def __init__(self):
         super().__init__()
@@ -55,13 +56,16 @@ class RGBModel(nn.Module):
                 res = torch.cat((res, output), 0)
         return res
 
+
 model = RGBModel()
 model = model.to(device)
 print('prepare model')
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=lr, momentum=0.9, weight_decay=0.0005 )
+optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=lr, momentum=0.9, weight_decay=0.0005)
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.2, patience=5)
+
+
 # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=25, gamma=0.5, last_epoch=-1)
 
 def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, model_dir):
@@ -88,9 +92,9 @@ def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, 
 
             corrects += torch.sum(pred_label == labels).item()
 
-            if (idx+1) %  interval == 0:
+            if (idx + 1) % interval == 0:
                 total += buf.size(0)
-                loss  = loss / total
+                loss = loss / total
                 print('RGB processing [current:{}/ total:{}],  loss  {:.4f}'.format(total, total, loss))
 
                 acc = corrects / total
@@ -99,9 +103,12 @@ def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, 
             optimizer.step()
 
         acc = corrects / total
-        print('[*] RGB [train-e-{}/{}] [acc-{:.4f}, loss-{:.4f}][{}/{}]'.format(epoch, n_epoch, acc, loss, corrects, total))
+        print('[*] RGB [train-e-{}/{}] [acc-{:.4f}, loss-{:.4f}][{}/{}]'.format(epoch, n_epoch, acc, loss, corrects,
+                                                                                total))
         with open('./{}.txt'.foramt(os.path.basename(__file__).split('.')[0]), 'a+') as record:
-            record.write('[train-e-{}/{}] [acc-{:.4f} loss-{:.4f}] [{}/{}] \n'.format(epoch, n_epoch, acc, loss, corrects, total))
+            record.write(
+                '[train-e-{}/{}] [acc-{:.4f} loss-{:.4f}] [{}/{}] \n'.format(epoch, n_epoch, acc, loss, corrects,
+                                                                             total))
 
         model.eval()
         with torch.no_grad():
@@ -131,18 +138,20 @@ def train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, 
             print('acc {:.4f}, loss {:.4f}'.format(acc, loss))
             with open('./{}.txt'.foramt(os.path.basename(__file__).split('.')[0]), 'a+') as record:
                 record.write('[val-e-{}/{}] [acc-{:.4f} loss-{:.4f}] [{}/{}] \n'.
-                    format(epoch, n_epoch, acc, loss, corrects, total))
+                             format(epoch, n_epoch, acc, loss, corrects, total))
 
             # whether save model
             if acc >= 0.70:
                 try:
                     if not os.path.exists(model_dir):
                         os.makedirs(model_dir)
-                    torch.save(model.state_dict(), os.path.join(model_dir,'RGB_densenet_1_{:.4f}.pth'.format(acc)))
+                    torch.save(model.state_dict(), os.path.join(model_dir, 'RGB_densenet_1_{:.4f}.pth'.format(acc)))
                 except Exception as e:
                     print(str(e))
                     with open('./record.txt', 'a+') as record:
                         record.write('[ERROR] ' + str(e) + '\n')
 
+
 if __name__ == '__main__':
-    train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader, '/home/datasets/mayilong/PycharmProjects/p55/trained_model/rgb')
+    train_model(model, n_epoch, optimizer, scheduler, train_loader, val_loader,
+                '/home/datasets/mayilong/PycharmProjects/p55/trained_model/rgb')
